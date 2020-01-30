@@ -1,0 +1,97 @@
+machine='Hera'
+
+#my_file_prefix='K1'
+#NN_sring='SEQ'
+#nepochs=25
+#batch_size=18
+#n_filters_for_first_layer=32
+#double_filters=False
+
+#my_file_prefix='K1_C13'
+#data_suffix = 'C13'
+#NN_sring='SEQ'
+#nepochs=25
+#batch_size=18
+#n_filters_for_first_layer=32
+#double_filters=False
+
+#my_file_prefix='K1_C13GLM'
+#data_suffix = 'C13GLM'
+#NN_sring='SEQ'
+#nepochs=25
+#batch_size=18
+#n_filters_for_first_layer=32
+#double_filters=False
+
+#my_file_prefix='K1_C13C09'
+#data_suffix = 'C13C09'
+#NN_sring='SEQ'
+#nepochs=25
+#batch_size=18
+#n_filters_for_first_layer=32
+#double_filters=False
+
+#my_file_prefix='K1_C13C09GLM'
+#data_suffix = 'C13C09GLM'
+#NN_sring='SEQ'
+#nepochs=25
+#batch_size=18
+#n_filters_for_first_layer=32
+#double_filters=False
+
+### weighted loss functions
+
+# this is a test to confirm I'm doing MSE correctly
+#my_file_prefix='K1t_C13'
+#data_suffix = 'C13'
+#NN_sring='SEQ'
+#nepochs=25
+#batch_size=18
+#n_filters_for_first_layer=32
+#double_filters=False
+#loss='my_mean_squared_error_noweight'
+
+#my_file_prefix='K2'
+#NN_sring='SEQ'
+#nepochs=25
+#batch_size=18
+#n_filters_for_first_layer=32
+#double_filters=False
+#loss='my_mean_squared_error_weighted1'
+
+#my_file_prefix='K2_C13'
+#data_suffix = 'C13'
+#NN_sring='SEQ'
+#nepochs=25
+#batch_size=18
+#n_filters_for_first_layer=32
+#double_filters=False
+#loss='my_mean_squared_error_weighted1'
+
+#my_file_prefix='K2_C13GLM'
+#data_suffix = 'C13GLM'
+#NN_sring='SEQ'
+#nepochs=25
+#batch_size=18
+#n_filters_for_first_layer=32
+#double_filters=False
+#loss='my_mean_squared_error_weighted1'
+
+#my_file_prefix='K2_C13C09'
+#data_suffix = 'C13C09'
+#NN_sring='SEQ'
+#nepochs=25
+#batch_size=18
+#n_filters_for_first_layer=32
+#double_filters=False
+#loss='my_mean_squared_error_weighted1'
+
+my_file_prefix='K2_C13C09GLM'
+data_suffix = 'C13C09GLM'
+NN_sring='SEQ'
+nepochs=25
+batch_size=18
+n_filters_for_first_layer=32
+double_filters=False
+loss='my_mean_squared_error_weighted1'
+
