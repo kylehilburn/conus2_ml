@@ -32,6 +32,7 @@ from tensorflow.keras.layers import Reshape
 from tensorflow.keras.layers import Input
 from tensorflow.keras.layers import Concatenate
 from tensorflow.keras.layers import BatchNormalization
+from tensorflow.keras.layers import Dropout
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.models import Model
 from tensorflow.keras.optimizers import Adam
@@ -328,7 +329,7 @@ else:
                 model.add(BatchNormalization())
         model.add(MaxPooling2D(poolfilter,padding=padding))
         if dropout:
-            x = Dropout(dropout_rate)(x)
+            model.add(Dropout(dropout_rate))
         if double_filters:
             n_filters = n_filters * 2 # double for NEXT layer
 
@@ -344,7 +345,7 @@ else:
                 model.add(BatchNormalization())
         model.add(UpSampling2D(upfilter))
         if dropout:
-            x = Dropout(dropout_rate)(x)
+            model.add(Dropout(dropout_rate))
         if double_filters:
             n_filters = n_filters // 2 # halve for NEXT layer
 
