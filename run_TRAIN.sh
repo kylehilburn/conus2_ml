@@ -31,7 +31,10 @@ cd /scratch1/RDARCH/rda-goesstf/conus2/Code
 
 MYPY=/scratch1/RDARCH/rda-goesstf/anaconda/bin/python
 
-srun -n $SLURM_NTASKS $MYPY MAIN_TRAIN_and_SAVE_MODEL.py configuration.txt
+#srun -n $SLURM_NTASKS $MYPY MAIN_TRAIN_and_SAVE_MODEL.py configuration.txt
+
+# requires command line argument: my_file_prefix
+srun -n $SLURM_NTASKS $MYPY MAIN_TRAIN_and_SAVE_MODEL.py $1
 
 #srun -n $SLURM_NTASKS $PYPATH/python MAIN_TRAIN_and_SAVE_MODEL.py configuration.txt
 #srun -n $SLURM_NTASKS $PYPATH/python MAIN_TRAIN_and_SAVE_MODEL.py /home/Kyle.Hilburn/goesstf/conus2/configuration.txt

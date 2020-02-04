@@ -17,7 +17,8 @@ from make_custom_file_names import data_file_name
 # custom loss functions
 from custom_model_elements import my_mean_squared_error_noweight
 from custom_model_elements import my_mean_squared_error_weighted1
-# Note: also need to set this function below the line "### LOSS FUNCTION"
+from custom_model_elements import my_mean_squared_error_weighted
+# Note: also need to set this function below the line "##### LOSS FUNCTION"
 
 import warnings
 warnings.simplefilter(action='ignore',category=FutureWarning)
@@ -37,12 +38,14 @@ from tensorflow.keras.models import Sequential
 from tensorflow.keras.models import Model
 from tensorflow.keras.optimizers import Adam
 
-# optional command line argument: configuration file name
+# required command line argument: my_file_prefix
 try:
-    config_file_name = sys.argv[1]
-    config = read_configuration(config_file_name)
+    my_file_prefix = sys.argv[1]
 except IndexError:
-    config = read_configuration()
+    sys.exit('Error: you must supply my_file_prefix as command line argument')
+print('my_file_prefix =',my_file_prefix)
+
+config = read_configuration()
 
 ################################################################
 
@@ -54,7 +57,10 @@ verbose_fit = 1
 try:
     machine = config['machine']
 except KeyError:
-    machine = defcon['machine']
+    try:
+        machine = config[my_file_prefix]['machine']
+    except KeyError:
+        machine = defcon['machine']
 print('machine =',machine)
 
 if machine == 'Hera':
@@ -75,7 +81,10 @@ print('start MAIN_TRAIN_and_SAVE_MODEL=',datetime.now())
 try:
     data_suffix = config['data_suffix']
 except KeyError:
-    data_suffix = defcon['data_suffix']
+    try:
+        data_suffix = config[my_file_prefix]['data_suffix']
+    except KeyError:
+        data_suffix = defcon['data_suffix']
 print('data_suffix =',data_suffix)
 
 data_file = data_file_name( spath, suffix=data_suffix ) # load file name from file
@@ -91,143 +100,215 @@ nbatches_train,ny,nx,nchans = Xdata_train.shape
 # to make sure we don't overwrite model files, etc.
 # Example:  'I1', where I is for Imme and 1 denotes Experiment #1.
 print('Configuration:')
-try:
-    my_file_prefix = config['my_file_prefix']
-except KeyError:
-    sys.exit('Error: you must supply my_file_prefix in configuration file')
-print('my_file_prefix =',my_file_prefix)
 
 ### parameter choices for training ###
 
 try:
     NN_string = config['NN_string']
 except KeyError:
-    NN_string = defcon['NN_string']
+    try:
+        NN_string = config[my_file_prefix]['NN_string']
+    except KeyError:
+        NN_string = defcon['NN_string']
 print('NN_string =',NN_string)
 
 try:
     activ = config['activ']
 except KeyError:
-    activ = defcon['activ']
+    try:
+        activ = config[my_file_prefix]['activ']
+    except KeyError:
+        activ = defcon['activ']
 print('activ =',activ)
 
 try:
     activ_last = config['activ_last']
 except KeyError:
-    activ_last = defcon['activ_last']
+    try:
+        activ_last = config[my_file_prefix]['activ_last']
+    except KeyError:
+        activ_last = defcon['activ_last']
 print('activ_last =',activ_last)
 
 try:
     batch_size = config['batch_size']
 except KeyError:
-    batch_size = int(nbatches_train/defcon['batch_step_size'])
+    try:
+        batch_size = config[my_file_prefix]['batch_size']
+    except KeyError:
+        batch_size = int(nbatches_train/defcon['batch_step_size'])
 print('batch_size =',batch_size)
 
 try:
     batchnorm = config['batchnorm']
 except KeyError:
-    batchnorm = defcon['batchnorm']
+    try:
+        batchnorm = config[my_file_prefix]['batchnorm']
+    except KeyError:
+        batchnorm = defcon['batchnorm']
 print('batchnorm=',batchnorm)
 
 try:
     convfilter = config['convfilter']
 except KeyError:
-    convfilter = defcon['convfilter']
+    try:
+        convfilter = config[my_file_prefix]['convfilter']
+    except KeyError:
+        convfilter = defcon['convfilter']
 print('convfilter =',convfilter)
 
 try:
     convfilter_last_layer = config['convfilter_last_layer']
 except KeyError:
-    convfilter_last_layer = defcon['convfilter_last_layer']
+    try:
+        convfilter_last_layer = config[my_file_prefix]['convfilter_last_layer']
+    except KeyError:
+        convfilter_last_layer = defcon['convfilter_last_layer']
 print('convfilter_last_layer =',convfilter_last_layer)
 
 try:
     double_filters = config['double_filters']
 except KeyError:
-    double_filters = defcon['double_filters']
+    try:
+        double_filters = config[my_file_prefix]['double_filters']
+    except KeyError:
+        double_filters = defcon['double_filters']
 print('double_filters =',double_filters)
 
 try:
     dropout = config['dropout']
 except KeyError:
-    dropout = defcon['dropout']
+    try:
+        dropout = config[my_file_prefix]['dropout']
+    except KeyError:
+        dropout = defcon['dropout']
 print('dropout = ',dropout)
 
 if dropout:
     try:
         dropout_rate = config['dropout_rate']
     except KeyError:
-        dropout_rate = defcon['dropout_rate']
+        try:
+            dropout_rate = config[my_file_prefix]['dropout_rate']
+        except KeyError:
+            dropout_rate = defcon['dropout_rate']
     print('dropout_rate = ',dropout_rate)
 
 try:
     kernel_init = config['kernel_init']
 except KeyError:
-    kernel_init = defcon['kernel_init']
+    try:
+        kernel_init = config[my_file_prefix]['kernel_init']
+    except KeyError:
+        kernel_init = defcon['kernel_init']
 print('kernel_init =',kernel_init)
 
-### LOSS FUNCTION
+##### LOSS FUNCTION #####
 try:
     loss = config['loss']
 except KeyError:
-    loss = defcon['loss']
+    try:
+        loss = config[my_file_prefix]['loss']
+    except KeyError:
+        loss = defcon['loss']
 print('loss =',loss)
-if loss == 'my_mean_squared_error_noweight': loss = my_mean_squared_error_noweight
-if loss == 'my_mean_squared_error_weighted1': loss = my_mean_squared_error_weighted1
-###
+hasweightarg = False
+if loss in ['my_mean_squared_error_weighted']:
+    hasweightarg = True
+if not hasweightarg:
+    if loss == 'my_mean_squared_error_noweight': loss = my_mean_squared_error_noweight
+    if loss == 'my_mean_squared_error_weighted1': loss = my_mean_squared_error_weighted1
+else:
+    try:
+        loss_weight = config['loss_weight']
+    except KeyError:
+        try:
+            loss_weight = config[my_file_prefix]['loss_weight']
+        except KeyError:
+            loss_weight = defcon['loss_weight']
+    print('loss_weight=',loss_weight)
+    if loss == 'my_mean_squared_error_weighted': loss = my_mean_squared_error_weighted(weight=loss_weight)
+##########
 
 try:
     n_conv_layers_per_decoder_layer = \
         config['n_conv_layers_per_decoder_layer']
 except KeyError:
-    n_conv_layers_per_decoder_layer = \
-        defcon['n_conv_layers_per_decoder_layer']
+    try:
+        n_conv_layers_per_decoder_layer = \
+            config[my_file_prefix]['n_conv_layers_per_decoder_layer']
+    except KeyError:
+        n_conv_layers_per_decoder_layer = \
+            defcon['n_conv_layers_per_decoder_layer']
 print('n_conv_layers_per_decoder_layer =',n_conv_layers_per_decoder_layer)
 
 try:
     n_conv_layers_per_encoder_layer = \
         config['n_conv_layers_per_encoder_layer']
 except KeyError:
-    n_conv_layers_per_encoder_layer = \
-        defcon['n_conv_layers_per_encoder_layer']
+    try:
+        n_conv_layers_per_encoder_layer = \
+            config[my_file_prefix]['n_conv_layers_per_encoder_layer']
+    except KeyError:
+        n_conv_layers_per_encoder_layer = \
+            defcon['n_conv_layers_per_encoder_layer']
 print('n_conv_layers_per_encoder_layer =',n_conv_layers_per_encoder_layer)
 
 try:
     n_encoder_decoder_layers = config['n_encoder_decoder_layers']
 except KeyError:
-    n_encoder_decoder_layers = defcon['n_encoder_decoder_layers']
+    try:
+        n_encoder_decoder_layers = config[my_file_prefix]['n_encoder_decoder_layers']
+    except KeyError:
+        n_encoder_decoder_layers = defcon['n_encoder_decoder_layers']
 print('n_encoder_decoder_layers =',n_encoder_decoder_layers)
 
 try:
     n_filters_for_first_layer = config['n_filters_for_first_layer']
 except KeyError:
-    n_filters_for_first_layer = defcon['n_filters_for_first_layer']
+    try:
+        n_filters_for_first_layer = config[my_file_prefix]['n_filters_for_first_layer']
+    except KeyError:
+        n_filters_for_first_layer = defcon['n_filters_for_first_layer']
 print('n_filters_for_first_layer =',n_filters_for_first_layer)
 
 try:
     n_filters_last_layer = config['n_filters_last_layer']
 except KeyError:
-    n_filters_last_layer = defcon['n_filters_last_layer']
+    try:
+        n_filters_last_layer = config[my_file_prefix]['n_filters_last_layer']
+    except KeyError:
+        n_filters_last_layer = defcon['n_filters_last_layer']
 print('n_filters_last_layer =',n_filters_last_layer)
 
 try:
     nepochs = config['nepochs']
 except KeyError:
-    nepochs = defcon['nepochs']
+    try:
+        nepochs = config[my_file_prefix]['nepochs']
+    except KeyError:
+        nepochs = defcon['nepochs']
 print('nepochs =',nepochs)
 
 try:
     poolfilter = config['poolfilter']
 except KeyError:
-    poolfilter = defcon['poolfilter']
+    try:
+        poolfilter = config[my_file_prefix]['poolfilter']
+    except KeyError:
+        poolfilter = defcon['poolfilter']
 print('poolfilter =',poolfilter)
 
 try:
     upfilter = config['upfilter']
 except KeyError:
-    upfilter = defcon['upfilter']
+    try:
+        upfilter = config[my_file_prefix]['upfilter']
+    except KeyError:
+        upfilter = defcon['upfilter']
 print('upfilter =',upfilter)
 
+################################################################
 ##### part below does not change
 
 if NN_string == 'SEQ':

@@ -2,6 +2,8 @@ from ast import literal_eval
 
 def read_configuration(filename='configuration.txt'):
 
+    thekey = None
+
     config = {}
 
     print('reading configuration file=',filename)
@@ -19,11 +21,21 @@ def read_configuration(filename='configuration.txt'):
         if len(items) != 2: continue  #bad format
         akey = items[0]
         avalue = items[1]
-  
+
         try:
-            config[akey] = literal_eval(avalue)
+            avalue = literal_eval(avalue)
         except ValueError:
-            config[akey] = avalue  #string
+            pass
+
+        if akey == 'my_file_prefix':
+            config[avalue] = {}
+            thekey = avalue
+            continue
+
+        if thekey == None:
+            config[akey] = avalue
+        else:
+            config[thekey][akey] = avalue
 
     f.close()
 

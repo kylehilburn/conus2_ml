@@ -11,8 +11,9 @@ defcon['data_suffix'] = ''
 defcon['double_filters'] = True  #double filters for each layer
 defcon['dropout'] = False
 defcon['dropout_rate'] = 0.1
-defcon['kernel_init'] = 'glorot_uniform'  # default in TF
+defcon['kernel_init'] = 'glorot_uniform' #'he_uniform'  ##'glorot_uniform'  # default in TF
 defcon['loss'] = 'mean_squared_error'
+defcon['loss_weight'] = 0.0
 defcon['machine'] = 'notHera'
 defcon['n_conv_layers_per_decoder_layer'] = 1  #1=CP blocks, 2=CCP,...; for up-blocks
 defcon['n_conv_layers_per_encoder_layer'] = 1  #1=CP blocks, 2=CCP,...
