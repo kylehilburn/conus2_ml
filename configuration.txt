@@ -206,12 +206,12 @@ machine='Hera'
 #nepochs=25
 #batch_size=18
 
-my_file_prefix='K4_K1redo'
-NN_string='SEQ'
-nepochs=25
-batch_size=18
-n_filters_for_first_layer=32
-double_filters=False
+#my_file_prefix='K4_K1redo'
+#NN_string='SEQ'
+#nepochs=25
+#batch_size=18
+#n_filters_for_first_layer=32
+#double_filters=False
 
 ### K5: more weighted loss functions ###
 
