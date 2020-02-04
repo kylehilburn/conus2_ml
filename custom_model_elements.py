@@ -24,7 +24,9 @@ def my_mean_squared_error_noweight(y_true,y_pred):
 def my_mean_squared_error_weighted1(y_true,y_pred):
     return K.mean( tf.multiply( tf.exp(tf.multiply(5.0,y_true)) , tf.square(tf.subtract(y_pred,y_true)) ) )
 
-def my_mean_squared_error_weighted(y_true,y_pred,weight=0.0):
-    return K.mean( tf.multiply( tf.exp(tf.multiply(weight,y_true)) , tf.square(tf.subtract(y_pred,y_true)) ) )
+def my_mean_squared_error_weighted(weight=0.0):
+    def loss(y_true,y_pred):
+        return K.mean( tf.multiply( tf.exp(tf.multiply(weight,y_true)) , tf.square(tf.subtract(y_pred,y_true)) ) )
+    return loss
 
 ################################################################
