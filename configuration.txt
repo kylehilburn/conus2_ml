@@ -1,5 +1,7 @@
 machine='Hera'
 
+### K1 ###
+ 
 #my_file_prefix='K1'
 #NN_sring='SEQ'
 #nepochs=25
@@ -39,7 +41,7 @@ machine='Hera'
 #n_filters_for_first_layer=32
 #double_filters=False
 
-### weighted loss functions
+### K2: weighted loss functions ###
 
 # this is a test to confirm I'm doing MSE correctly
 #my_file_prefix='K1t_C13'
@@ -86,12 +88,88 @@ machine='Hera'
 #double_filters=False
 #loss='my_mean_squared_error_weighted1'
 
-my_file_prefix='K2_C13C09GLM'
-data_suffix = 'C13C09GLM'
-NN_sring='SEQ'
+#my_file_prefix='K2_C13C09GLM'
+#data_suffix = 'C13C09GLM'
+#NN_sring='SEQ'
+#nepochs=25
+#batch_size=18
+#n_filters_for_first_layer=32
+#double_filters=False
+#loss='my_mean_squared_error_weighted1'
+
+### K3: 1x1 convo filters ###
+
+#my_file_prefix='K3_C13'
+#data_suffix = 'C13'
+#NN_sring='SEQ'
+#nepochs=25
+#batch_size=18
+#n_filters_for_first_layer=32
+#double_filters=False
+#loss='my_mean_squared_error_weighted1'
+#convfilter=(1,1)
+#poolfilter=(1,1)
+#upfilter=(1,1)
+
+#my_file_prefix='K3_C13GLM'
+#data_suffix = 'C13GLM'
+#NN_sring='SEQ'
+#nepochs=25
+#batch_size=18
+#n_filters_for_first_layer=32
+#double_filters=False
+#loss='my_mean_squared_error_weighted1'
+#convfilter=(1,1)
+#poolfilter=(1,1)
+#upfilter=(1,1)
+
+#my_file_prefix='K3_C13C09'
+#data_suffix = 'C13C09'
+#NN_sring='SEQ'
+#nepochs=25
+#batch_size=18
+#n_filters_for_first_layer=32
+#double_filters=False
+#loss='my_mean_squared_error_weighted1'
+#convfilter=(1,1)
+#poolfilter=(1,1)
+#upfilter=(1,1)
+
+### K4: hyperparameter tuning ###
+
+#my_file_prefix='K4_drop10'
+#NN_sring='SEQ'
+#nepochs=25
+#batch_size=18
+#n_filters_for_first_layer=32
+#double_filters=False
+#dropout=True
+#dropout_rate=0.1
+
+#my_file_prefix='K4_drop20'
+#NN_sring='SEQ'
+#nepochs=25
+#batch_size=18
+#n_filters_for_first_layer=32
+#double_filters=False
+#dropout=True
+#dropout_rate=0.2
+
+#my_file_prefix='K4_UNET'  #bug: note mis-spelled NN_string, so doubled filters but no skips
+#NN_sring='UNET'
+#nepochs=25
+#batch_size=18
+
+#my_file_prefix='K4_unet'
+#NN_string='UNET'
+#nepochs=25
+#batch_size=18
+
+my_file_prefix='K4_heunif'
+NN_string='SEQ'
 nepochs=25
 batch_size=18
 n_filters_for_first_layer=32
 double_filters=False
-loss='my_mean_squared_error_weighted1'
+kernel_init='he_uniform'
 
