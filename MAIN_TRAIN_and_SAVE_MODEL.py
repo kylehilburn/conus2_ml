@@ -177,6 +177,14 @@ if loss == 'my_mean_squared_error_weighted1': loss = my_mean_squared_error_weigh
 ###
 
 try:
+    n_conv_layers_per_decoder_layer = \
+        config['n_conv_layers_per_decoder_layer']
+except KeyError:
+    n_conv_layers_per_decoder_layer = \
+        defcon['n_conv_layers_per_decoder_layer']
+print('n_conv_layers_per_decoder_layer =',n_conv_layers_per_decoder_layer)
+
+try:
     n_conv_layers_per_encoder_layer = \
         config['n_conv_layers_per_encoder_layer']
 except KeyError:
@@ -229,7 +237,8 @@ else:
 print('IS_UNET =',IS_UNET)
 
 layer_format = ['P','CP','CCP','CCCP','CCCCP']
-print('layer_format =',layer_format[n_conv_layers_per_encoder_layer])
+print('encoder layer_format =',layer_format[n_conv_layers_per_encoder_layer])
+print('decoder layer_format =',layer_format[n_conv_layers_per_decoder_layer])
 
 optimizer = Adam()
 print('optimizer = Adam')
@@ -288,7 +297,7 @@ if IS_UNET:
             n_filters = n_filters * 2 # double for NEXT layer
 
     for i_encode_decoder_layer in range(n_encoder_decoder_layers):
-        for i in range(n_conv_layers_per_encoder_layer): #add conv layer
+        for i in range(n_conv_layers_per_decoder_layer): #add conv layer
             x = Conv2DTranspose(n_filters,convfilter,activation=activ,\
                 padding=padding,kernel_initializer=kernel_init)(x)
             if batchnorm:
@@ -337,7 +346,7 @@ else:
     for i_encode_decoder_layer in range( n_encoder_decoder_layers ):
         print('Add decoder layer #' + repr(i_encode_decoder_layer) )
 
-        for i in range(n_conv_layers_per_encoder_layer): #add conv layer
+        for i in range(n_conv_layers_per_decoder_layer): #add conv layer
             model.add(Conv2DTranspose(n_filters,convfilter,\
                 activation=activ,padding=padding,\
                 kernel_initializer=kernel_init))
