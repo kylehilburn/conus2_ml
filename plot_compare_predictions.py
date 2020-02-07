@@ -1,3 +1,7 @@
+import ir_radar
+from ltg_radar import norm as ltg_norm
+from ltg_radar import bounds as ltg_ticks
+
 import numpy as np
 from matplotlib import pyplot as plt
 from mpl_toolkits.basemap import Basemap
@@ -8,6 +12,11 @@ from prepare_data import ymin_default,ymax_default,xmin_default,xmax_default
 from radar_reflec_cmap_clipped import cmap, norm, bounds, ticklabels
 from refc_statistics import get_refc_stats
 from read_datetimes import read_datetimes
+
+# custom loss functions
+from custom_model_elements import my_mean_squared_error_noweight
+from custom_model_elements import my_mean_squared_error_weighted1
+from custom_model_elements import my_mean_squared_error_weighted
 
 import warnings
 with warnings.catch_warnings():
@@ -20,25 +29,82 @@ with warnings.catch_warnings():
 panels = ['F','G','H','I','J']
 
 data_file = {}
-data_file['F'] = '../DATA_SCALED/conusC13.npz'
-data_file['G'] = '../DATA_SCALED/conusC13GLM.npz'
-data_file['H'] = '../DATA_SCALED/conusC13C09.npz'
-data_file['I'] = '../DATA_SCALED/conusC13C09GLM.npz'
+#
+#data_file['F'] = '../DATA_SCALED/conusC13.npz'
+#data_file['G'] = '../DATA_SCALED/conusC13GLM.npz'
+#data_file['H'] = '../DATA_SCALED/conusC13C09.npz'
+#data_file['I'] = '../DATA_SCALED/conusC13C09GLM.npz'
+#data_file['J'] = '../DATA_SCALED/conus.npz'
+#
+#data_file['F'] = '../DATA_SCALED/conusC13.npz'
+#data_file['G'] = '../DATA_SCALED/conusC13GLM.npz'
+#data_file['H'] = '../DATA_SCALED/conusC13C09.npz'
+#data_file['I'] = '../DATA_SCALED/conusC13C09.npz'
+#data_file['J'] = '../DATA_SCALED/conusC13C09.npz'
+#
+data_file['F'] = '../DATA_SCALED/conus.npz'
+data_file['G'] = '../DATA_SCALED/conus.npz'
+data_file['H'] = '../DATA_SCALED/conus.npz'
+data_file['I'] = '../DATA_SCALED/conus.npz'
 data_file['J'] = '../DATA_SCALED/conus.npz'
 
 model_file = {}
-model_file['F'] = '../OUTPUT/MODEL/model_K1_C13_SEQ_blocks_3_epochs_25.h5'
-model_file['G'] = '../OUTPUT/MODEL/model_K1_C13GLM_SEQ_blocks_3_epochs_25.h5'
-model_file['H'] = '../OUTPUT/MODEL/model_K1_C13C09_SEQ_blocks_3_epochs_25.h5'
-model_file['I'] = '../OUTPUT/MODEL/model_K1_C13C09GLM_SEQ_blocks_3_epochs_25.h5'
-model_file['J'] = '../OUTPUT/MODEL/model_K1_SEQ_blocks_3_epochs_25.h5'
+#
+#model_file['F'] = '../OUTPUT/MODEL/model_K1_C13_SEQ_blocks_3_epochs_25.h5'
+#model_file['G'] = '../OUTPUT/MODEL/model_K1_C13GLM_SEQ_blocks_3_epochs_25.h5'
+#model_file['H'] = '../OUTPUT/MODEL/model_K1_C13C09_SEQ_blocks_3_epochs_25.h5'
+#model_file['I'] = '../OUTPUT/MODEL/model_K1_C13C09GLM_SEQ_blocks_3_epochs_25.h5'
+#model_file['J'] = '../OUTPUT/MODEL/model_K1_SEQ_blocks_3_epochs_25.h5'
+#
+#model_file['F'] = 'from_hera/model_K2_C13_SEQ_blocks_3_epochs_25.h5'
+#model_file['G'] = 'from_hera/model_K2_C13GLM_SEQ_blocks_3_epochs_25.h5'
+#model_file['H'] = 'from_hera/model_K2_C13C09_SEQ_blocks_3_epochs_25.h5'
+#model_file['I'] = 'from_hera/model_K2_C13C09GLM_SEQ_blocks_3_epochs_25.h5'
+#model_file['J'] = 'from_hera/model_K2_SEQ_blocks_3_epochs_25.h5'
+#
+#model_file['F'] = 'from_hera/model_K3_C13_SEQ_blocks_3_epochs_25.h5'
+#model_file['G'] = 'from_hera/model_K3_C13GLM_SEQ_blocks_3_epochs_25.h5'
+#model_file['H'] = 'from_hera/model_K3_C13C09_SEQ_blocks_3_epochs_25.h5'
+#model_file['I'] = 'from_hera/model_K3_C13C09_SEQ_blocks_3_epochs_25.h5'
+#model_file['J'] = 'from_hera/model_K3_C13C09_SEQ_blocks_3_epochs_25.h5'
+#
+#model_file['F'] = 'from_hera/model_K5_0_SEQ_blocks_3_epochs_25.h5'
+#model_file['G'] = 'from_hera/model_K5_1_SEQ_blocks_3_epochs_25.h5'
+#model_file['H'] = 'from_hera/model_K5_2_SEQ_blocks_3_epochs_25.h5'
+#model_file['I'] = 'from_hera/model_K5_3_SEQ_blocks_3_epochs_25.h5'
+#model_file['J'] = 'from_hera/model_K5_4_SEQ_blocks_3_epochs_25.h5'
+#
+model_file['F'] = 'from_hera/model_K5_0_SEQ_blocks_3_epochs_25.h5'
+model_file['G'] = 'from_hera/model_K6_34_SEQ_blocks_3_epochs_25.h5'
+model_file['H'] = 'from_hera/model_K6_40_SEQ_blocks_3_epochs_25.h5'
+model_file['I'] = 'from_hera/model_K6_44_SEQ_blocks_3_epochs_25.h5'
+model_file['J'] = 'from_hera/model_K6_39_SEQ_blocks_3_epochs_25.h5'
 
 model_name = {}
-model_name['F'] = 'C13'
-model_name['G'] = 'C13+GLM'
-model_name['H'] = 'C13+C09'
-model_name['I'] = 'C13+C09+GLM'
-model_name['J'] = 'C13+C09+C07+GLM'
+#
+#model_name['F'] = 'C13'
+#model_name['G'] = 'C13+GLM'
+#model_name['H'] = 'C13+C09'
+#model_name['I'] = 'C13+C09+GLM'
+#model_name['J'] = 'C13+C09+C07+GLM'
+#
+#model_name['F'] = 'C13'
+#model_name['G'] = 'C13+GLM'
+#model_name['H'] = 'C13+C09'
+#model_name['I'] = 'C13+C09'
+#model_name['J'] = 'C13+C09'
+#
+#model_name['F'] = 'Wt=0'
+#model_name['G'] = 'Wt=1'
+#model_name['H'] = 'Wt=2'
+#model_name['I'] = 'Wt=3'
+#model_name['J'] = 'Wt=4'
+#
+model_name['F'] = 'K5_0'
+model_name['G'] = 'K6_34'
+model_name['H'] = 'K6_40'
+model_name['I'] = 'K6_44'
+model_name['J'] = 'K6_39'
 
 # load data and models, make predictions
 
@@ -49,7 +115,12 @@ for apanel in panels:
 model = {}
 for apanel in panels:
     model[apanel] = load_model(model_file[apanel],\
-        custom_objects={"my_r_square_metric": my_r_square_metric})
+        custom_objects = { \
+        "my_r_square_metric": my_r_square_metric,\
+        "my_mean_squared_error_weighted1": my_mean_squared_error_weighted1,\
+        "my_mean_squared_error_weighted": my_mean_squared_error_weighted,\
+        "loss": my_mean_squared_error_weighted(),\
+        })
 
 prediction = {}
 for apanel in panels:
@@ -98,8 +169,8 @@ ncol = 5
 nrow = 2
 fs = 'xx-small'
 
-for itest in range(ntest):
-#for itest in [68]:
+#for itest in range(ntest):
+for itest in [68]:
 
     datestring = datetimes['TEST'][itest].strftime('%Y%m%d%H%MZ')
 
@@ -119,12 +190,14 @@ for itest in range(ntest):
 
     bad = Ydata_test[itest,:,:] < -99
 
-    tbcmap = plt.get_cmap('jet_r')
+    tbcmap = plt.get_cmap('ir')
+    vmin_tb = 200
+    vmax_tb = 280
 
     plt.subplot(nrow,ncol,1)
     zz = Xdata_test[itest,:,:,0]
     zz = np.ma.masked_where(bad,zz)
-    pcm = basemap.pcolormesh(xb,yb,zz,cmap=tbcmap,vmin=200,vmax=300)
+    pcm = basemap.pcolormesh(xb,yb,zz,cmap=tbcmap,vmin=vmin_tb,vmax=vmax_tb)
     basemap.drawcoastlines()
     basemap.drawcountries()
     basemap.drawstates()
@@ -134,7 +207,7 @@ for itest in range(ntest):
     plt.subplot(nrow,ncol,2)
     zz = Xdata_test[itest,:,:,1]
     zz = np.ma.masked_where(bad,zz)
-    pcm = basemap.pcolormesh(xb,yb,zz,cmap=tbcmap,vmin=200,vmax=300)
+    pcm = basemap.pcolormesh(xb,yb,zz,cmap=tbcmap,vmin=vmin_tb,vmax=vmax_tb)
     basemap.drawcoastlines()
     basemap.drawcountries()
     basemap.drawstates()
@@ -144,7 +217,7 @@ for itest in range(ntest):
     plt.subplot(nrow,ncol,3)
     zz = Xdata_test[itest,:,:,2]
     zz = np.ma.masked_where(bad,zz)
-    pcm = basemap.pcolormesh(xb,yb,zz,cmap=tbcmap,vmin=200,vmax=300)
+    pcm = basemap.pcolormesh(xb,yb,zz,cmap=tbcmap,vmin=vmin_tb,vmax=vmax_tb)
     basemap.drawcoastlines()
     basemap.drawcountries()
     basemap.drawstates()
@@ -156,13 +229,10 @@ for itest in range(ntest):
     cb.set_label('Brightness Temperature (K)',fontsize=fs)
     cb.ax.tick_params(labelsize=fs)
 
-    ltgcmap = plt.get_cmap('jet')
-    ltgcmap.set_under('#e3e3e3')
-
     plt.subplot(nrow,ncol,4)
     zz = Xdata_test[itest,:,:,3]
     zz = np.ma.masked_where(bad,zz)
-    pcm = basemap.pcolormesh(xb,yb,zz,cmap=ltgcmap,vmin=0.1,vmax=50)
+    pcm = basemap.pcolormesh(xb,yb,zz,cmap='ltg',norm=ltg_norm)
     basemap.drawcoastlines()
     basemap.drawcountries()
     basemap.drawstates()
@@ -170,7 +240,7 @@ for itest in range(ntest):
     plt.title('(D) GOES-16 GLM Groups',fontsize=fs)
 
     cbax = fig.add_axes([0.63, 0.56, 0.14, 0.015])
-    cb = plt.colorbar(pcm,orientation='horizontal',cax=cbax,ticks=[0.1,25,50])
+    cb = plt.colorbar(pcm,orientation='horizontal',cax=cbax,ticks=ltg_ticks[::2])
     cb.set_label('Groups/5-minutes/km^2',fontsize=fs)
     cb.ax.tick_params(labelsize=fs)
 
@@ -211,7 +281,12 @@ for itest in range(ntest):
         plt.title('('+apanel+') '+ model_name[apanel] + '\n' + stat_string,fontsize=fs)
 
 
-    figname = '../OUTPUT/Prediction_Figures/fig_'+str(itest).zfill(zfill)+'_'+datestring+'.png'
+#    figname = '../OUTPUT/Prediction_Figures/fig_'+str(itest).zfill(zfill)+'_'+datestring+'.png'
+#    figname = '../OUTPUT/Prediction_Figures_WtLoss/fig_'+str(itest).zfill(zfill)+'_'+datestring+'.png'
+#    figname = '../OUTPUT/Prediction_Figures_1x1/fig_'+str(itest).zfill(zfill)+'_'+datestring+'.png'
+#    figname = '../OUTPUT/Prediction_Figures_Wt/fig_'+str(itest).zfill(zfill)+'_'+datestring+'.png'
+    figname = '../OUTPUT/Prediction_Figures_Wt_K6/fig_'+str(itest).zfill(zfill)+'_'+datestring+'.png'
+
     fig.savefig(figname,dpi=300)
     print(figname)
     plt.clf()

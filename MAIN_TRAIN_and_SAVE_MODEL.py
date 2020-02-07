@@ -18,6 +18,10 @@ from make_custom_file_names import data_file_name
 from custom_model_elements import my_mean_squared_error_noweight
 from custom_model_elements import my_mean_squared_error_weighted1
 from custom_model_elements import my_mean_squared_error_weighted
+from custom_model_elements import my_mean_squared_error_weighted_linear
+from custom_model_elements import my_mean_squared_error_weighted_gaussian
+from custom_model_elements import my_mean_squared_error_weighted_genexp
+from custom_model_elements import my_mean_absolute_error_weighted_genexp
 # Note: also need to set this function below the line "##### LOSS FUNCTION"
 
 import warnings
@@ -213,7 +217,12 @@ except KeyError:
         loss = defcon['loss']
 print('loss =',loss)
 hasweightarg = False
-if loss in ['my_mean_squared_error_weighted']:
+if loss in ['my_mean_squared_error_weighted',\
+        'my_mean_squared_error_weighted_linear',\
+        'my_mean_squared_error_weighted_gaussian',\
+        'my_mean_squared_error_weighted_genexp',\
+        'my_mean_absolute_error_weighted_genexp',\
+        ]:
     hasweightarg = True
 if not hasweightarg:
     if loss == 'my_mean_squared_error_noweight': loss = my_mean_squared_error_noweight
@@ -228,6 +237,10 @@ else:
             loss_weight = defcon['loss_weight']
     print('loss_weight=',loss_weight)
     if loss == 'my_mean_squared_error_weighted': loss = my_mean_squared_error_weighted(weight=loss_weight)
+    if loss == 'my_mean_squared_error_weighted_linear': loss = my_mean_squared_error_weighted_linear(weight=loss_weight)
+    if loss == 'my_mean_squared_error_weighted_gaussian': loss = my_mean_squared_error_weighted_gaussian(weight=loss_weight)
+    if loss == 'my_mean_squared_error_weighted_genexp': loss = my_mean_squared_error_weighted_genexp(weight=loss_weight)
+    if loss == 'my_mean_absolute_error_weighted_genexp': loss = my_mean_absolute_error_weighted_genexp(weight=loss_weight)
 ##########
 
 try:

@@ -29,4 +29,29 @@ def my_mean_squared_error_weighted(weight=0.0):
         return K.mean( tf.multiply( tf.exp(tf.multiply(weight,y_true)) , tf.square(tf.subtract(y_pred,y_true)) ) )
     return loss
 
+def my_mean_squared_error_weighted_linear(weight=0.0):
+    # weight here is actually slope
+    def loss(y_true,y_pred):
+        return K.mean( tf.multiply( tf.add(1.0,tf.multiply(weight,y_true)) , tf.square(tf.subtract(y_pred,y_true)) ) )
+    return loss
+
+def my_mean_squared_error_weighted_gaussian(weight=0.0):
+    def loss(y_true,y_pred):
+        return K.mean( tf.multiply( tf.exp(tf.multiply(weight,tf.square(y_true))) , tf.square(tf.subtract(y_pred,y_true)) ) )
+    return loss
+
+def my_mean_squared_error_weighted_genexp(weight=(1.0,0.0,0.0)):
+    def loss(y_true,y_pred):
+        return K.mean( tf.multiply( \
+            tf.multiply( weight[0], tf.exp( tf.multiply( weight[1], tf.pow(y_true,weight[2]) ) ) ) , \
+            tf.square(tf.subtract(y_pred,y_true)) ) )
+    return loss
+
+def my_mean_absolute_error_weighted_genexp(weight=(1.0,0.0,0.0)):
+    def loss(y_true,y_pred):
+        return K.mean( tf.multiply( \
+            tf.multiply( weight[0], tf.exp( tf.multiply( weight[1], tf.pow(y_true,weight[2]) ) ) ) , \
+            tf.abs(tf.subtract(y_pred,y_true)) ) )
+    return loss
+
 ################################################################

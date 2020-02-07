@@ -8,33 +8,40 @@ from make_custom_file_names import data_file_name
 from read_configuration import read_configuration
 from default_configuration import defcon
 
-# optional command line argument: configuration file name
-try:
-    config_file_name = sys.argv[1]
-    config = read_configuration(config_file_name)
-except IndexError:
-    config = read_configuration()
-
 print('start MAIN_PREPARE_SAVE_DATA=',datetime.now())
 
-spath = '..'  #Imme
+# required command line argument: my_file_prefix
+try:
+    my_file_prefix = sys.argv[1]
+except IndexError:
+    sys.exit('Error: you must supply my_file_prefix as command line argument')
+print('my_file_prefix =',my_file_prefix)
+
+config = read_configuration()
 
 try:
     machine = config['machine']
 except KeyError:
-    machine = defcon['machine']
+    try:
+        machine = config[my_file_prefix]['machine']
+    except KeyError:
+        machine = defcon['machine']
 print('machine =',machine)
 
+spath = '..'  #Imme
 if machine == 'Hera':
     spath = '/scratch1/RDARCH/rda-goesstf/conus2'  #KH on Hera
 
 try:
     data_suffix = config['data_suffix']
 except KeyError:
-    data_suffix = defcon['data_suffix']
+    try:
+        data_suffix = config[my_file_prefix]['data_suffix']
+    except KeyError:
+        data_suffix = defcon['data_suffix']
 print('data_suffix =',data_suffix)
 
-data_file = data_file_name( spath, suffix=data_suffix ) # load file name from file
+data_file = data_file_name( spath, suffix=data_suffix ) # get data file name
 
 filename_format = spath+'/SAMPLES/case{0:02n}.nc'
 ncases = 92
@@ -45,8 +52,14 @@ channels = ['C07','C09','C13','GROUP']
 qctimes_train = [] #all good
 qctimes_test = [] #all good
 
-train = prepare_data(filename_format, cases_train, channels, qctimes_train)
-test = prepare_data(filename_format, cases_test, channels, qctimes_test)
+if data_suffix == 'LTG1':
+    xmin = {1:0.00, 6:0.00, 7:200, 9:200, 13:200, 'GROUP':0.0}
+    xmax = {1:1.00, 6:1.00, 7:300, 9:300, 13:300, 'GROUP':50.0}
+    train = prepare_data(filename_format, cases_train, channels, qctimes_train, xmin=xmin,xmax=xmax)
+    test = prepare_data(filename_format, cases_test, channels, qctimes_test, xmin=xmin,xmax=xmax)
+else:
+    train = prepare_data(filename_format, cases_train, channels, qctimes_train)
+    test = prepare_data(filename_format, cases_test, channels, qctimes_test)
 
 if data_suffix == 'C13':
     print('zero out C07, C09, GLM')

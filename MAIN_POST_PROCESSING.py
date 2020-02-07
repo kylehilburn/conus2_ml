@@ -21,12 +21,14 @@ with warnings.catch_warnings():
     warnings.simplefilter('ignore')  #to catch FutureWarnings
     from tensorflow.keras.models import load_model
 
-# optional command line argument: configuration file name
+# required command line argument: my_file_prefix
 try:
-    config_file_name = sys.argv[1]
-    config = read_configuration(config_file_name)
+    my_file_prefix = sys.argv[1]
 except IndexError:
-    config = read_configuration()
+    sys.exit('Error: you must supply my_file_prefix as command line argument')
+print('my_file_prefix =',my_file_prefix)
+
+config = read_configuration()
 
 ##############################
 # Choose whether to do the following
@@ -37,22 +39,36 @@ WANT_CONVERGENCE_PLOTS = True
 ##############################
 ### Choose model for which to run the visualization - by parameters:
 
+spath = '..'  #Imme
+
+try:
+    machine = config['machine']
+except KeyError:
+    try:
+        machine = config[my_file_prefix]['machine']
+    except KeyError:
+        machine = defcon['machine']
+print('machine =',machine)
+
+if machine == 'Hera':
+    spath = '/scratch1/RDARCH/rda-goesstf/conus2'  #KH on Hera
+
 try:
     data_suffix = config['data_suffix']
 except KeyError:
-    data_suffix = defcon['data_suffix']
+    try:
+        data_suffix = config[my_file_prefix]['data_suffix']
+    except KeyError:
+        data_suffix = defcon['data_suffix']
 print('data_suffix =',data_suffix)
-
-try:
-    my_file_prefix = config['my_file_prefix']
-except KeyError:
-    sys.exit('Error: you must supply my_file_prefix in configuration file')
-print('my_file_prefix =',my_file_prefix)
 
 try:
     NN_string = config['NN_string']
 except KeyError:
-    NN_string = defcon['NN_string']
+    try:
+        NN_string = config[my_file_prefix]['NN_string']
+    except KeyError:
+        NN_string = defcon['NN_string']
 print('NN_string =',NN_string)
 
 if NN_string == 'SEQ':
@@ -64,25 +80,32 @@ print('IS_UNET =',IS_UNET)
 try:
     n_encoder_decoder_layers = config['n_encoder_decoder_layers']
 except KeyError:
-    n_encoder_decoder_layers = defcon['n_encoder_decoder_layers']
+    try:
+        n_encoder_decoder_layers = config[my_file_prefix]['n_encoder_decoder_layers']
+    except KeyError:
+        n_encoder_decoder_layers = defcon['n_encoder_decoder_layers']
+print('n_encoder_decoder_layers =',n_encoder_decoder_layers)
 
 try:
     nepochs = config['nepochs']
 except KeyError:
-    nepochs = defcon['nepochs']
+    try:
+        nepochs = config[my_file_prefix]['nepochs']
+    except KeyError:
+        nepochs = defcon['nepochs']
+print('nepochs =',nepochs)
 
 ######################################################################
 ### Filenames for model, history, data, etc.
 
-modelfile = model_file_name(IS_UNET, my_file_prefix, \
+modelfile = model_file_name(spath, IS_UNET, my_file_prefix, \
     n_encoder_decoder_layers, nepochs )
-historyfile = history_file_name( IS_UNET, my_file_prefix, \
+historyfile = history_file_name( spath, IS_UNET, my_file_prefix, \
     n_encoder_decoder_layers, nepochs )
-#data_file = data_file_name( )
-data_file = data_file_name( suffix=data_suffix ) # load file name from file
-predictionsfile = predictions_file_name(IS_UNET, my_file_prefix, \
+data_file = data_file_name( spath, suffix=data_suffix ) # load file name from file
+predictionsfile = predictions_file_name(spath, IS_UNET, my_file_prefix, \
     n_encoder_decoder_layers, nepochs)
-convergence_plot_file = convergence_plot_file_name(IS_UNET, \
+convergence_plot_file = convergence_plot_file_name(spath, IS_UNET, \
     my_file_prefix, n_encoder_decoder_layers, nepochs)
 
 ######################################################################
