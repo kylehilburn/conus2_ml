@@ -7,12 +7,20 @@ import sys
 
 # Self-defined functions
 from load_data import load_data
-from custom_model_elements import my_r_square_metric
 from read_configuration import read_configuration
 from default_configuration import defcon
 from make_custom_file_names import model_file_name
 from make_custom_file_names import history_file_name
 from make_custom_file_names import data_file_name
+
+# custom metrics
+from custom_model_elements import my_r_square_metric
+from custom_model_elements import my_csi20_metric
+from custom_model_elements import my_csi35_metric
+from custom_model_elements import my_csi50_metric
+from custom_model_elements import my_bias20_metric
+from custom_model_elements import my_bias35_metric
+from custom_model_elements import my_bias50_metric
 
 # custom loss functions
 from custom_model_elements import my_mean_squared_error_noweight
@@ -341,6 +349,12 @@ padding = 'same'
 print('padding = ',padding)
 
 metrics = [my_r_square_metric,'mean_absolute_error']
+metrics.append(my_csi20_metric)
+metrics.append(my_csi35_metric)
+metrics.append(my_csi50_metric)
+metrics.append(my_bias20_metric)
+metrics.append(my_bias35_metric)
+metrics.append(my_bias50_metric)
 if loss != 'mean_squared_error':
     metrics.append('mean_squared_error')
 
