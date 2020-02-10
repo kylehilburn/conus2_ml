@@ -391,8 +391,13 @@ if IS_UNET:
             n_filters = n_filters * 2 # double for NEXT layer
 
     for i_encode_decoder_layer in range(n_encoder_decoder_layers):
+        # This was moved up to make endcoder and decoder symmetric.
+        if double_filters:
+            n_filters = n_filters // 2 # halve for NEXT layer
+        
         for i in range(n_conv_layers_per_decoder_layer): #add conv layer
-            x = Conv2DTranspose(n_filters,convfilter,activation=activ,\
+            # Switched from Conv2DTranspose to Conv2D.  Same functionality, but easier to visualize filters.
+            x = Conv2D(n_filters,convfilter,activation=activ,\
                 padding=padding,kernel_initializer=kernel_init)(x)
             if batchnorm:
                 x = BatchNormalization()(x)
@@ -400,8 +405,6 @@ if IS_UNET:
         x = Concatenate()([x,skip.pop()]) # pop top element
         if dropout:
             x = Dropout(dropout_rate)(x)
-        if double_filters:
-            n_filters = n_filters // 2 # halve for NEXT layer
 
     # One additional (3x3) conv layer to properly incorporate newly
     # added channels at previous concatenate step
@@ -440,8 +443,13 @@ else:
     for i_encode_decoder_layer in range( n_encoder_decoder_layers ):
         print('Add decoder layer #' + repr(i_encode_decoder_layer) )
 
+        # This was moved up to make endcoder and decoder symmetric.
+        if double_filters:
+            n_filters = n_filters // 2 # halve for NEXT layer
+        
         for i in range(n_conv_layers_per_decoder_layer): #add conv layer
-            model.add(Conv2DTranspose(n_filters,convfilter,\
+            # Switched from Conv2DTranspose to Conv2D.  Same functionality, but easier to visualize filters.
+            model.add(Conv2D(n_filters,convfilter,\
                 activation=activ,padding=padding,\
                 kernel_initializer=kernel_init))
             if batchnorm:
@@ -449,8 +457,7 @@ else:
         model.add(UpSampling2D(upfilter))
         if dropout:
             model.add(Dropout(dropout_rate))
-        if double_filters:
-            n_filters = n_filters // 2 # halve for NEXT layer
+        
 
     # last layer: 2D convolution with (1x1) just to merge the channels
     model.add(Conv2D(n_filters_last_layer,convfilter_last_layer,\

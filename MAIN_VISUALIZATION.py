@@ -18,13 +18,14 @@ from custom_model_elements import my_r_square_metric
 from prepare_data import ymax_default as ymax
 from read_configuration import read_configuration
 from default_configuration import defcon
-from visualization_functions import \
-    find_symmetric_range_for_colormap,\
-    calc_and_plot_backward_optimization_results_one_layer,\
-    calc_and_plot_backward_optimization_history,\
-    calc_and_plot_feature_maps,\
-    calc_and_plot_MAX_INPUT_PATCHES_one_layer_one_feature_selected_samples,\
-    calc_and_plot_MAX_INPUT_PATCHES_one_layer_one_sample_all_features
+from visualization_functions import *
+    #\
+    #find_symmetric_range_for_colormap,\
+    #calc_and_plot_backward_optimization_results_one_layer,\
+    #calc_and_plot_backward_optimization_history,\
+    #calc_and_plot_feature_maps,\
+    #calc_and_plot_MAX_INPUT_PATCHES_one_layer_one_feature_selected_samples,\
+    #calc_and_plot_MAX_INPUT_PATCHES_one_layer_one_sample_all_features
 
 import warnings
 with warnings.catch_warnings():
@@ -104,12 +105,12 @@ print('nepochs =',nepochs)
 
 # Need to run predictions on test data.  Do we also want predictions for training data?  Currently no needed.
 ALSO_PREDICT_TRAINING_DATA = False
-WANT_CONVERGENCE_PLOT = True
-WANT_PREDICTION_PLOTS = True
-WANT_FEATURE_MAPS = True
+WANT_CONVERGENCE_PLOT = True #True
+WANT_PREDICTION_PLOTS = False #True
+WANT_BACKWARD_OPTIMIZATION_MAPS = True
+WANT_FEATURE_MAPS = False # True
 # The following only works if WANT_BACKWARD_OPTIMIZATION_MAPS is True as well.
 # Reason:  We use backward optimization to estimate the ERF for each layer, which is needed for this.
-WANT_BACKWARD_OPTIMIZATION_MAPS = True
 WANT_FEATURE_ACTIVATION_INPUT_PATCHES = True
 
 # initialize lists for effective receptive field
@@ -217,28 +218,9 @@ if WANT_PREDICTION_PLOTS:
             my_image = my_image_list[i].reshape(ny,nx)
             # Create color scale that uses symmetric range around 0, i.e. of the form [-M,M].
             z_abs_max, z_min, z_max, non_zero_values_exist = find_symmetric_range_for_colormap( my_image, 0.0001 )
-            axes[i].imshow(my_image,cmap='RdGy',clim=(-z_abs_max,z_abs_max))
+            #axes[i].imshow(my_image,cmap='RdGy',clim=(-z_abs_max,z_abs_max))
+            axes[i].imshow(my_image,cmap='bone', clim=(0,z_abs_max) )
             axes[i].set_title('{}  [{:#.1F} , {:#.1F}]'.format(my_desription_list[i],z_min,z_max) )
-            
-        """
-        axes[0].imshow(Xdata_test[i_sample,:,:,0].reshape(ny,nx))    #, cmap="gray_r")
-        axes[0].set_title('GOES ABI #1')
-
-        axes[1].imshow(Xdata_test[i_sample,:,:,1].reshape(ny,nx))
-        axes[1].set_title('GOES ABI #2')
-
-        axes[2].imshow(Xdata_test[i_sample,:,:,2].reshape(ny,nx))
-        axes[2].set_title('GOES ABI #3')
-
-        axes[3].imshow(Xdata_test[i_sample,:,:,3].reshape(ny,nx))
-        axes[3].set_title('GOES GLM')
-
-        axes[4].imshow(Zdata_test[i_sample,:,:].reshape(ny,nx))
-        axes[4].set_title('MRMS estimate')
-        
-        axes[5].imshow(Ydata_test[i_sample,:,:].reshape(ny,nx))
-        axes[5].set_title('MRMS actual')
-        """
         
         my_plot_filename = prediction_plot_file_start + '_testsample_' + repr(i_sample) + '.png'
 
@@ -367,7 +349,7 @@ if WANT_FEATURE_MAPS:
 ### and visualize corresponding region of image
 
 if WANT_FEATURE_ACTIVATION_INPUT_PATCHES:
-    
+
     print( '\nFind patches in input images that maximize feature map.' )
 
     # Choose whether to analyze test or training sample
@@ -396,7 +378,7 @@ if WANT_FEATURE_ACTIVATION_INPUT_PATCHES:
         ####################################
         ### Plot input patches for specific sample - ACROSS ALL FEATURES
         
-        samples_to_analyze = [0,5,10,15] # select samples to analyze
+        samples_to_analyze = [0,100,200,400] # select samples to analyze
         n_samples =  Xdata_for_input_patches.shape[0]
         
         for i_sample in samples_to_analyze:
@@ -411,7 +393,8 @@ if WANT_FEATURE_ACTIVATION_INPUT_PATCHES:
         features_to_analyze = [0,1,2,3] # select features to analyze
         n_features = model.layers[i_layer].output.shape[3]
 
-        samples_to_analyze = [0,5,10,15] # select samples to analyze
+        # select samples to analyze (out-of-range numbers will just be ignored)
+        samples_to_analyze = [0,10,20,50,100,200,300,400]
         for i_feature in features_to_analyze:
             if i_feature < n_features:  # make sure not to exceed number of layers
             

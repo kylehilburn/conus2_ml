@@ -53,7 +53,9 @@ def prediction_plot_file_name_start( spath, IS_UNET, my_file_prefix, n_encoder_d
 ################################################################
 def feature_map_file_name_start(spath,IS_UNET, my_file_prefix, n_encoder_decoder_layers, nepochs):
 
-    file_name_start = spath+'/OUTPUT/FIGURES/FEATURE_MAPS/feature_map_' + my_file_prefix + '_' + main_string( IS_UNET, n_encoder_decoder_layers, nepochs)
+    file_name_start = spath+'/OUTPUT/FIGURES/FEATURE_MAPS_AND_FILTERS/features_filters_' + my_file_prefix + '_' + main_string( IS_UNET, n_encoder_decoder_layers, nepochs)
+    
+    #file_name_start = spath+'/OUTPUT/FIGURES/FEATURE_MAPS_AND_FILTERS/feature_map_' + my_file_prefix + '_' + main_string( IS_UNET, n_encoder_decoder_layers, nepochs)
 
     return file_name_start
 ################################################################

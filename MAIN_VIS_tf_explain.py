@@ -97,10 +97,7 @@ except KeyError:
 print('nepochs =',nepochs)
 
 ALSO_PREDICT_TRAINING_DATA = False
-#WANT_CONVERGENCE_PLOT = False
-#WANT_PREDICTION_PLOTS = False
-#WANT_FEATURE_MAPS = True
-#WANT_LRP_PLOTS = True
+
 
 ######################################################################
 ### Filenames for model, history, data, etc.
@@ -171,104 +168,102 @@ print('Ydata_test min,mean,max=',np.min(Ydata_test),np.mean(Ydata_test),np.max(Y
 # Done with preparation steps for data and predictions.
 
 ###############################################
-############## VISUALIZATION# #################
-###############################################
+# Choose parameters:
 
-############### Visualization Task #1 ###############
-# Generate convergence plot
-#if WANT_CONVERGENCE_PLOT:
-#    print('Convergence plots')
-#    plot_convergence(historyfile,convergence_plot_file)
+### Choose a method:
+# 1: Occlusion
+# 2: GradCam (Class Activation Map for latest convolution layer in model) - not meaningful for models without fully connected layer
+# 3: SmoothGrad
+method_number = 3
 
-###############################################
+### Get the sample you want to analyze
+i_testsample = 0
+my_sample = Xdata_test[i_testsample,:,:,:]
+n_samples_to_analyze = 1
+my_sample = my_sample.reshape(nx,ny,nchans)
 
-# Only set ONE of the following to true.
-# Otherwise the "last" method with True will be used to generate map.
-
-# Not very elegant...  improve later.
-WANT_Occlusion_HEATMAP = False  # This method did not seem useful.
-WANT_GradCAM_HEATMAP = False  # This method did not seem useful either.
-WANT_SmoothGrad_HEATMAP = True  # This one seems to give a good estimate of effective receptive field.
-
-
-if True:
-
-    ###############################################
-    ### Get the sample you want to analyze
-    i_testsample = 0
-    my_sample = Xdata_test[i_testsample,:,:,:]
-    n_samples_to_analyze = 1
-    my_sample = my_sample.reshape(nx,ny,nchans)
-
-    ###############################################
-    # Choose which pixel in output image we want to analyze.
-    my_row=100 #25
-    my_col=100 #120
-    my_index = my_row * ny + my_col   # Should this be nx or ny?  Doesn't matter here, because nx=ny.
-
-    ### Check we used to do for LRP - should not be needed here, but printing value anyway:
-    pixel_value = Zdata_test[i_testsample, my_row, my_col]  # pixel value of estimate
-    print('Pixel(' + repr(my_row) + ',' + repr(my_col) + ') = ' + repr(pixel_value))
-    # if pixel_value <= 0:
-    #    print( '\n --- Warning - estimate for LRP might not be correct! --- \n --- Reason: estimated output at pixel={}. ---'.format(pixel_value))
-
-    my_data = ( [my_sample], None )
-
-    # CV colormaps to choose from:
-    # See https://docs.opencv.org/master/d3/d50/group__imgproc__colormap.html#gga9a805d8262bcbe273f16be9ea2055a65afdb81862da35ea4912a75f0e8f274aeb
-    #   for list of CV colormaps
-    # COLORMAP_HOT  # white to red
-    # COLORMAP_BONE # white to gray
-    # COLORMAP_PINK # white to reddish
+# Choose which pixel in output image we want to analyze.
+my_row=100 #25
+my_col=100 #120
+my_index = my_row * ny + my_col   # Should this be nx or ny?  Doesn't matter here, because nx=ny.
 
 
-    if WANT_Occlusion_HEATMAP:  # Occlusion method - results were disappointing.
 
-        ########### Method: Occlusion ################
-        explainer = OcclusionSensitivity() # define which type of heatmap we want
-        occlusion_patch_width = 20
-        heatmap = explainer.explain( my_data, model, my_index, occlusion_patch_width, colormap=cv2.COLORMAP_PINK )
+### Check we used to do for LRP - should not be needed here, but printing value anyway:
+pixel_value = Zdata_test[i_testsample, my_row, my_col]  # pixel value of estimate
+print('Pixel(' + repr(my_row) + ',' + repr(my_col) + ') = ' + repr(pixel_value))
+# if pixel_value <= 0:
+#    print( '\n --- Warning - estimate for LRP might not be correct! --- \n --- Reason: estimated output at pixel={}. ---'.format(pixel_value))
 
-        my_title_text = 'Occlusion - patch = ' + repr(occlusion_patch_width) + ' pixels'
-        my_file_text = 'occlusion' + '_' + repr(occlusion_patch_width)  #+ repr{my_row} + '{}_P{}_{}'.format('%i %i %i')
+my_data = ( [my_sample], None )
 
-    if WANT_GradCAM_HEATMAP:  # GradCAM - results made no sense either
-        ########### Method: Grad CAM ################
-        explainer = GradCAM()
-        my_layer_name = 'conv2d_2'
-        heatmap = explainer.explain(my_data, model, my_layer_name, my_index, colormap=cv2.COLORMAP_HOT )
-
-        my_title_text = 'GradCam - Layer:' + my_layer_name
-        my_file_text = 'GradCam_'  + my_layer_name
+# CV colormaps to choose from:
+# See https://docs.opencv.org/master/d3/d50/group__imgproc__colormap.html#gga9a805d8262bcbe273f16be9ea2055a65afdb81862da35ea4912a75f0e8f274aeb
+#   for list of CV colormaps
+# COLORMAP_HOT  # white to red
+# COLORMAP_BONE # white to gray
+# COLORMAP_PINK # white to reddish
 
 
-    if WANT_SmoothGrad_HEATMAP:
-        ########### Method: SmoothGrad ################
-        print( 'Note: if num_samples is chosen large, then this can take several minutes\n')
-        explainer = SmoothGrad()
-        my_layer_name = 'conv2d_2'
-        num_samples = 20 #200
-        noise = 1.0  #1.0
-        heatmap = explainer.explain(my_data, model, my_index, num_samples, noise)   #, colormap=cv2.COLORMAP_HOT)
+if method_number==1:  # Occlusion method - results were disappointing.
 
-        my_title_text = 'SmoothGrad - samples ' + repr(num_samples) + ' noise ' + repr(noise)
-        my_file_text = 'SmoothGrad_s' + repr(num_samples) + '_n' + repr(noise)
+    ########### Method: Occlusion ################
+    explainer = OcclusionSensitivity() # define which type of heatmap we want
+    occlusion_patch_width = 20
+    heatmap = explainer.explain( my_data, model, my_index, occlusion_patch_width, colormap=cv2.COLORMAP_PINK )
+
+    my_title_text = 'Occlusion - patch = ' + repr(occlusion_patch_width) + ' pixels'
+    my_file_text = 'tf_explain_occlusion' + '_' + repr(occlusion_patch_width)  #+ repr{my_row} + '{}_P{}_{}'.format('%i %i %i')
+
+elif method_number==2:
+    ########### Method: Grad CAM ################
+    ### Apply GradCAM (class activation map) to the last convolution layer of the network.
+    explainer = GradCAM()
+
+    # find last convolution layer in model (typically 1x1 convolution)
+    n_layers = len(model.layers)
+    layer_names = [layer.name for layer in model.layers]
+    my_layer_name = ''  # start with empty string
+    for i_layer in range(n_layers):
+        this_name = layer_names[i_layer]
+        if "conv" in this_name:
+            my_layer_name = this_name
+    print(my_layer_name)
+
+    # Generate result
+    heatmap = explainer.explain(my_data, model, my_layer_name, my_index, colormap=cv2.COLORMAP_HOT )
+
+    my_title_text = 'GradCam - Layer:' + my_layer_name
+    my_file_text = 'tf_explain_GradCam_'  + my_layer_name
 
 
-    ########## VISUALIZE RESULTS ###################
+elif method_number==3:
+    ########### Method: SmoothGrad ################
+    print( 'Note: if num_samples is chosen large, then this can take several minutes\n')
+    explainer = SmoothGrad()
+    #my_layer_name = 'conv2d_2'
+    num_samples = 100 #200
+    noise = 1.0  #1.0
+    heatmap = explainer.explain(my_data, model, my_index, num_samples, noise)   #, colormap=cv2.COLORMAP_HOT)
 
-    # Show heatmap by itself.
-    f, axes = plt.subplots(1, 1, figsize=(8, 8))
-    axes.imshow(heatmap)
-    axes.set_title('Heatmap for row={} col={}.\n{}'.format(my_row, my_col, my_title_text) )
+    my_title_text = 'SmoothGrad - samples ' + repr(num_samples) + ' noise ' + repr(noise)
+    my_file_text = 'tf_explain_SmoothGrad_s' + repr(num_samples) + '_n' + repr(noise)
 
-    # Save heatmap to file.
-    my_plot_filename = heat_map_file_name_start(IS_UNET, my_file_prefix, n_encoder_decoder_layers, nepochs) + '_' + my_file_text  + '.png'
-    plt.savefig(my_plot_filename)
-    plt.close()
-    print('Saved file to ' + my_plot_filename + '\n')
 
-    #################
+########## VISUALIZE RESULTS ###################
+
+# Show heatmap by itself.
+f, axes = plt.subplots(1, 1, figsize=(8, 8))
+axes.imshow(heatmap)
+axes.set_title('Heatmap for row={} col={}.\n{}'.format(my_row, my_col, my_title_text) )
+
+# Save heatmap to file.
+my_plot_filename = heat_map_file_name_start(spath,IS_UNET, my_file_prefix, n_encoder_decoder_layers, nepochs) + '_' + my_file_text  + '.png'
+plt.savefig(my_plot_filename)
+plt.close()
+print('Saved file to ' + my_plot_filename + '\n')
+
+#################
 
 
 
