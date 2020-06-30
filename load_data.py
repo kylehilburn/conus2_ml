@@ -18,5 +18,13 @@ def load_data( data_file ):
     Lat_test   = my_file['Lat_test']
     Lon_test   = my_file['Lon_test']
 
+    if ('Xdata_scalar_train' in my_file) and ('Xdata_scalar_test' in my_file):
+        Xdata_scalar_train = my_file['Xdata_scalar_train']
+        Xdata_scalar_test = my_file['Xdata_scalar_test']
+    else:
+        Xdata_scalar_train = None
+        Xdata_scalar_test = None
+
     return Xdata_train, Ydata_train, Xdata_test, Ydata_test, \
-        Lat_train, Lon_train, Lat_test, Lon_test
+        Lat_train, Lon_train, Lat_test, Lon_test, \
+        Xdata_scalar_train, Xdata_scalar_test

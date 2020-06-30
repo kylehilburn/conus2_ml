@@ -8,7 +8,6 @@ with warnings.catch_warnings():
     import tensorflow.keras.backend as K
     import tensorflow as tf
 
-my_epsilon = 0.0001
 epsilon_for_BO = 0.0001
 epsilon_for_activation = 0.0001
 
@@ -198,110 +197,43 @@ def calc_and_plot_feature_maps( model, Xdata, i_sample, WANT_ONLY_CONV_LAYERS, f
     # Sample ready
 
     n_layers = len( model.layers )  # Use all layers
-    layer_names = [layer.name for layer in model.layers]
 
     ####### Build a new TF model that has all layers we care about and that can be queried for intermediate layers
 
-    # FOR OUTGOING ACTIVATION MAPS:
     # 1) First extract outputs of all layers
     layer_outputs = [layer.output for layer in model.layers]
-    # 2) Create a new model that is a subgraph of the original model by tensor flow.
-    # This model includes the intermediate information.
-    activation_model_outgoing = models.Model(inputs=model.input, outputs=layer_outputs)
-    # 3) Feed sample into this model and get the activations of its intermediate layers
-    activations_outgoing = activation_model_outgoing.predict( img_tensor )
+    layer_names = [layer.name for layer in model.layers]
 
-    # FOR INCOMING ACTIVATION MAPS:
-    # 1) First extract outputs of all layers
-    layer_inputs = [layer.input for layer in model.layers]
     # 2) Create a new model that is a subgraph of the original model by tensor flow.
-    # This model includes the intermediate information.
-    activation_model_incoming = models.Model(inputs=model.input, outputs=layer_inputs)
+    # This model contains only the first n_layers, but includes the intermediate information.
+    activation_model = models.Model(inputs=model.input, outputs=layer_outputs)
+
     # 3) Feed sample into this model and get the activations of its intermediate layers
-    activations_incoming = activation_model_incoming.predict( img_tensor )
+    activations = activation_model.predict( img_tensor )
 
     for i_layer in range(n_layers):
 
         # If desired: skip all layers but convolution layers
         if (WANT_ONLY_CONV_LAYERS==True and not "conv" in layer_names[i_layer]):
             continue
-        
-        # For all three color maps below: positive=blue negative=red.
-        my_colormap = 'seismic_r' # Saturates quickly, i.e. small changes seem very drastic.
-        my_colormap = 'bwr_r'# Same colors as seismic, but less saturation.
-        my_colormap = 'RdBu' # the least flashy, most calm colormap.
-        
-        ################## PLOT FILTER WEIGHTS ONLY ##################
-        # This does not seem as useful, so commented out for now.
-        # But the code below works fine.
-        
-        """
-        ### - this is not specific to the sample (so move this elsewhere later!)
-        print('\n ============ Layer ' + repr(i_layer) + ' ==========================')
-        this_layer_weights = model.layers[i_layer].get_weights()[0]
-        print('Extracting weights for layer ' + repr(i_layer))
-        print('Shape of weights:')
-        print( this_layer_weights.shape )
-
-        filter_size = this_layer_weights.shape[0]
-        n_chans_in = this_layer_weights.shape[2]
-        n_chans_out = this_layer_weights.shape[3]
-        print('Layer ' + repr(i_layer) + ': ' + repr(n_chans_in) + ' input channels -- ' + repr(n_chans_out) + ' output channels\n' )
-
-        n_rows = n_chans_in  # Each row is for one input channel
-        n_cols = n_chans_out # Each column is for one output channel
-
-        f, axes = plt.subplots(n_rows, n_cols, figsize=(n_cols*4, n_rows*4))
-        axes = axes.reshape((-1,n_cols)) # deal with the case of n_rows=1.  Otherwise subplots throws an error.
-
-        min_weight = np.amin( this_layer_weights )
-        max_weight = np.amax( this_layer_weights )
-        max_abs_weight = max( abs(min_weight), abs(max_weight) )
-
-        print( 'Max/min weight across all filters for this layer: [' + repr(min_weight) + ',' + repr(max_weight) + '] --> limits: [' + repr(-max_abs_weight) + ',' + repr(max_abs_weight) + ']')
-
-        for chan_in in range(n_chans_in):
-            for chan_out in range(n_chans_out):
-               i_row = chan_in  # In one row = all filters corresponding to one input channel
-               i_col = chan_out # In one col = all filters corresponding to one output channel
-               this_filter = this_layer_weights[:,:, chan_in, chan_out].reshape(filter_size,filter_size)
-               z_min = np.amin(this_filter)  # min value in image
-               z_max = np.amax(this_filter)  # max value in image
-
-               axes[i_row,i_col].imshow( this_filter, cmap=my_colormap, clim=(-max_abs_weight,max_abs_weight) )
-               axes[i_row,i_col].set_title('{:#2} to {:#2}\n[{:#.1F}, {:#.1F}]'.format(chan_in,chan_out,z_min, z_max), fontsize=24 )
-               axes[i_row,i_col].axis('off') # do not add ticks and tick marks on the axes
-
-        # Finish up: add caption and save entire image to file
-        f.suptitle( figure_caption_start + '  -  Layer ' + repr(i_layer) + ':  ' + layer_names[i_layer], fontsize=24 )
-
-        my_plot_filename = feature_map_file_start + '_filters_only' + '_activation_l_' + repr(i_layer) + '_' + layer_names[i_layer] +'.png'
-        
-        print('Saving sample activation plot to file ' + repr(my_plot_filename) )
-        plt.savefig( my_plot_filename )
-        plt.close()
-        """
-        ################## PLOT FEATURE MAPS ONLY ##################
-        # This does not seem as useful, so commented out for now.
-        # But the code below works fine.
-        
-        """
+            
         # Extract activations for one layer
-        my_layer_activation_out = activations_outgoing[i_layer]
+        my_layer_activation = activations[i_layer]
+        print( my_layer_activation.shape )  # Shape should be (1,nx,ny,n_filters)
 
-        if len(my_layer_activation_out.shape) < 4:
+        if len(my_layer_activation.shape) < 4:
             print('Layer ' + repr(i_layer) + ' does not have proper activation map.')
             continue
 
         # 5) Plot all feature maps for one layer
         # How many features are there?
-        n_feature_maps = my_layer_activation_out.shape[-1]  # last element provides # filters in that layer
+        n_feature_maps = my_layer_activation.shape[-1]  # last element provides # filters in that layer
 
         if n_feature_maps < 1:
             continue
 
-        image_width_out = my_layer_activation_out[0,:,:,0].shape[1]
-        print( 'Layer ' + repr(i_layer) + ' (' + layer_names[i_layer] + '): image width is ' + repr(image_width_out) + ' pixels')
+        image_width = my_layer_activation[0,:,:,0].shape[1]
+        print( 'Layer ' + repr(i_layer) + ' (' + layer_names[i_layer] + '): image width is ' + repr(image_width) + ' pixels')
 
         n_figures_per_row = 4
         n_cols = n_figures_per_row
@@ -322,7 +254,7 @@ def calc_and_plot_feature_maps( model, Xdata, i_sample, WANT_ONLY_CONV_LAYERS, f
             i_row = i_feature // n_figures_per_row
             i_col = i_feature - i_row * n_figures_per_row
             
-            my_image = my_layer_activation_out[0,:,:,i_feature].reshape(image_width_out,image_width_out)
+            my_image = my_layer_activation[0,:,:,i_feature].reshape(image_width,image_width)
             # Create color scale that uses symmetric range around 0, i.e. of the form [-M,M].
             z_abs_max, z_min, z_max, non_zero_values_exist = find_symmetric_range_for_colormap( my_image, epsilon_for_activation )
             # z_abs_max = max( 1.0, z_abs_max )  # Use [-1,1] as range, unless z_abs_max > 1.
@@ -331,114 +263,18 @@ def calc_and_plot_feature_maps( model, Xdata, i_sample, WANT_ONLY_CONV_LAYERS, f
             axes[i_row,i_col].set_title('Feature {:#2}   [{:#.1F} , {:#.1F}]'.format(i_feature,z_min,z_max) )
             if not non_zero_values_exist:
                 # draw a red box with title "No activation" in middle of box
-                axes[i_row,i_col].text(image_width_out//2, image_width_out//2, 'No activation', style='italic',
+                axes[i_row,i_col].text(image_width//2, image_width//2, 'No activation', style='italic',
                 bbox={'facecolor': 'red', 'alpha': 0.5, 'pad': 1})
             
         # Finish up: add caption and save entire image to file
         f.suptitle( figure_caption_start + '  -  Layer ' + repr(i_layer) + ':  ' + layer_names[i_layer], fontsize=24 )
         
-        my_plot_filename = feature_map_file_start + '_feature_map_sample_' + repr(i_sample) + '_activation_l_' + repr(i_layer) + '_' + layer_names[i_layer] +'.png'
+        my_plot_filename = feature_map_file_start + '_sample_' + repr(i_sample) + '_activation_l_' + repr(i_layer) + '_' + layer_names[i_layer] +'.png'
 
         print('Saving sample activation plot to file ' + repr(my_plot_filename) )
         plt.savefig( my_plot_filename )
         plt.close()
-        """
         
-        ### PLOT COMBINATION DIAGREM OF FEATURE MAPS AND FILTER WEIGHTS - most useful!
-
-        ### 1) GET FILTER WEIGHTS FOR THIS LAYER
-        print('\n ============ Layer ' + repr(i_layer) + ' ==========================')
-        this_layer_weights = model.layers[i_layer].get_weights()[0]
-
-        filter_size = this_layer_weights.shape[0]
-        n_chans_in = this_layer_weights.shape[2]
-        n_chans_out = this_layer_weights.shape[3]
-        print('Layer ' + repr(i_layer) + ': ' + repr(n_chans_in) + ' input channels -- ' + repr(n_chans_out) + ' output channels\n' )
-
-        ### 2) GET ACTIVATION MAPS FOR THIS LAYER: INPUT & OUTPUT MAP
-        my_layer_activation_out = activations_outgoing[i_layer]
-        my_layer_activation_in = activations_incoming[i_layer]
-
-        image_width_out = my_layer_activation_out[0,:,:,0].shape[1]
-        image_width_in = my_layer_activation_in[0,:,:,0].shape[1]
-
-        ###### ASSEMBLE PLOTS ##############
-        n_cols = n_chans_out + 1 # Add column on the very left: to show input activation maps
-        n_rows = n_chans_in + 1  # Add a row on very bottom: to show output activation maps
-
-        f, axes = plt.subplots(n_rows, n_cols, figsize=(n_cols*4, n_rows*4))
-        axes = axes.reshape((-1,n_cols)) # deal with the case of n_rows=1.  Otherwise subplots throws an error.
-
-        # Determine max and min of all filters to determine overall boundaries for colormap
-        min_weight = np.amin( this_layer_weights )
-        max_weight = np.amax( this_layer_weights )
-        max_abs_weight = max( abs(min_weight), abs(max_weight) )
-
-        for chan_in in range(n_chans_in):
-            # For each input channel: create one row of images
-
-            ###### Step 1: PLOT INPUT ACTIVATION MAPS (in first column)
-            i_col = 0
-            i_row = chan_in
-
-            my_image = my_layer_activation_in[0,:,:,chan_in].reshape(image_width_in,image_width_in)
-            # Create color scale that uses symmetric range around 0, i.e. of the form [-M,M].
-            z_abs_max, z_min, z_max, non_zero_values_exist = find_symmetric_range_for_colormap( my_image, epsilon_for_activation )
-            axes[i_row,i_col].imshow( my_image, cmap='bone', clim=(0,z_abs_max) )
-            axes[i_row,i_col].set_title('Feature {:#2}   [{:#.1F} , {:#.1F}]'.format(chan_in,z_min,z_max) )
-            if not non_zero_values_exist:
-                # draw a red box with title "No activation" in middle of box
-                axes[i_row,i_col].text(image_width_in//2, image_width_in//2, 'No activation', style='italic',
-                bbox={'facecolor': 'red', 'alpha': 0.5, 'pad': 1})
-
-            ###### Step 2: PLOT FILTERS
-            # add filter maps to the right of the input feature map
-            for chan_out in range(n_chans_out):
-               i_col = chan_out+1 # In the columns: filters corresponding to one output channel
-               i_row = chan_in    # In the rows: filters corresponding to one input channel
-               this_filter = this_layer_weights[:,:, chan_in, chan_out].reshape(filter_size,filter_size)
-               z_min = np.amin(this_filter)  # min value in image
-               z_max = np.amax(this_filter)  # max value in image
-
-               axes[i_row,i_col].imshow( this_filter, cmap=my_colormap, clim=(-max_abs_weight,max_abs_weight) )
-               axes[i_row,i_col].set_title('{:#2} to {:#2}    [{:#.1F}, {:#.1F}]'.format(chan_in,chan_out,z_min, z_max))  # , fontsize=24 )
-               axes[i_row,i_col].axis('off') # do not add ticks and tick marks on the axes
-
-        ###### Step 3: PLOT OUTPUT ACTIVATION MAPS (in bottom row)
-        for chan_out in range(n_chans_out):
-            i_row = n_chans_in
-            i_col = chan_out+1
-            # axes[i_row,i_col] = feature map at output
-
-            my_image = my_layer_activation_out[0,:,:,chan_out].reshape(image_width_out,image_width_out)
-            # Create color scale that uses symmetric range around 0, i.e. of the form [-M,M].
-            z_abs_max, z_min, z_max, non_zero_values_exist = find_symmetric_range_for_colormap( my_image, epsilon_for_activation )
-            # z_abs_max = max( 1.0, z_abs_max )  # Use [-1,1] as range, unless z_abs_max > 1.
-            # In RdGy:  gray is positive, white is 0, red is negative
-            axes[i_row,i_col].imshow( my_image, cmap='bone', clim=(0,z_abs_max) )
-            axes[i_row,i_col].set_title('Feature {:#2}   [{:#.1F} , {:#.1F}]'.format(chan_out,z_min,z_max) )
-            if not non_zero_values_exist:
-                # draw a red box with title "No activation" in middle of box
-                axes[i_row,i_col].text(image_width_out//2, image_width_out//2, 'No activation', style='italic',
-                bbox={'facecolor': 'red', 'alpha': 0.5, 'pad': 1})
-
-        # clear the only image in array that's not use:  bottom left corner
-        i_row = n_chans_in
-        i_col = 0
-        axes[i_row,i_col].set_visible(False)
-
-        # Finish up: add caption and save entire image to file
-        f.suptitle( figure_caption_start + '  -  Layer ' + repr(i_layer) + ':  ' + layer_names[i_layer], fontsize=24 )
-
-        #my_plot_filename = '../OUTPUT/FIGURES/FILTERS/filter_array_' + repr(i_layer) + '.png'
-        my_plot_filename = feature_map_file_start + '' + '_layer_' + repr(i_layer) + '_' + layer_names[i_layer] +'.png'
-        print('Saving sample activation plot to file ' + repr(my_plot_filename) )
-        plt.savefig( my_plot_filename )
-        plt.close()
-
-        ################################# END OF NEW STUFF ###################################
-
-
     return
 
 
@@ -449,54 +285,53 @@ def calc_and_plot_feature_maps( model, Xdata, i_sample, WANT_ONLY_CONV_LAYERS, f
 
 
 ############# Plot input patches for single i_layer, single i_feature, and ALL samples ##################
-def calc_and_plot_MAX_INPUT_PATCHES_one_layer_one_feature_selected_samples( i_layer, i_feature, activation_model, this_ERF, Xdata_for_input_patches, ny, nx, nchans, sample_description, samples_to_analyze, layer_names, n_activation_map_boundary_pixels_to_ignore, input_patches_file_start ):
+def calc_and_plot_MAX_INPUT_PATCHES_one_layer_one_feature_all_samples( i_layer, i_feature, activation_model, this_ERF, Xdata_for_input_patches, ny, nx, nchans, sample_description, layer_names, n_activation_map_boundary_pixels_to_ignore, input_patches_file_start ):
 
     n_samples = Xdata_for_input_patches.shape[0]
-    
-    # Make sure list of samples is feasible: take intersection of list of desired samples and valid range
-    samples_to_analyze_valid = list( set(samples_to_analyze) & set( range(n_samples) ) )
-    n_samples_to_analyze_valid = len( samples_to_analyze_valid )
-    
-    #print('\n\n\n  Valid samples: ' + repr(n_samples_to_analyze_valid) + '\n\n\n' )
     
     ######## Create big plot - each row is for one sample
     n_figures_per_row = 5  # Each row: feature map itself, plus patches of 4 input channel
     n_cols = n_figures_per_row
-    n_rows = n_samples_to_analyze_valid
+    n_rows = n_samples
     
     f, axes = plt.subplots(n_rows, n_cols, figsize=(n_cols*4, n_rows*4))
     axes = axes.reshape((-1,n_cols)) # deal with the case of n_rows=1.  Otherwise subplots throws an error.
     
-    for i_row in range(n_samples_to_analyze_valid):   # each row represents one valid sample
-
-        i_sample = samples_to_analyze_valid[i_row]
-        #print('\n  Row ' + repr(i_row) + ' Sample: ' + repr(i_sample) + '\n')
+    for i_sample in range( n_samples ):
+    
+        i_row = i_sample  # each row represents one sample
 
         # Operations specific to sample:
         # Feed sample into this shortened model and get the activations of its intermediate layers
         img_tensor = Xdata_for_input_patches[i_sample,:,:,:].reshape(1,ny,nx,nchans)  # Sample ready
-        activations_outgoing = activation_model.predict( img_tensor )
+        activations = activation_model.predict( img_tensor )
         
         # Extract activations for this layer and this sample
-        my_layer_activation_out = activations_outgoing[i_layer]
+        my_layer_activation = activations[i_layer]
+        #print( my_layer_activation.shape )  # Shape should be (1,nx,ny,n_filters)
 
-        if len(my_layer_activation_out.shape) < 4:
+        if len(my_layer_activation.shape) < 4:
             print('WARNING:  Layer ' + repr(i_layer) + ' does not have proper activation map.')
+            #continue
 
         # Consider all feature maps for one layer
-        n_feature_maps = my_layer_activation_out.shape[-1]  # last element provides # filters in that layer
+        n_feature_maps = my_layer_activation.shape[-1]  # last element provides # filters in that layer
         if n_feature_maps < 1:
             print(' Warning in MAX_INPUT_PATCHES: layer ' + repr(i_feature) + ' does not have any features' )
 
-        calc_and_plot_one_row_MAX_INPUT_PATCHES_one_layer_one_feature_one_sample( axes, i_row, i_layer, i_feature, i_sample, my_layer_activation_out, this_ERF, Xdata_for_input_patches, ny, nx, nchans,  n_activation_map_boundary_pixels_to_ignore  )
+        # Generate row of images - for one feature and one sample
+        #print('Input patches for:  Layer ' + repr(i_layer) + ' feature ' + repr(i_feature) + '  ' + sample_description + ' #' + repr(i_sample) )
+
+        calc_and_plot_one_row_MAX_INPUT_PATCHES_one_layer_one_feature_one_sample( axes, i_row, i_layer, i_feature, i_sample, my_layer_activation, this_ERF, Xdata_for_input_patches, ny, nx, nchans,  n_activation_map_boundary_pixels_to_ignore  )
         
     # Add label for each row
-    rows = ['S{}  '.format(row) for row in samples_to_analyze_valid]
+    rows = ['Sample {}  '.format(row) for row in range(n_feature_maps)]
     for ax, row in zip(axes[:,0], rows):
         ax.set_ylabel(row, rotation=0, size='large')
+    #f.tight_layout()
     plt.subplots_adjust(hspace=0.4)
     
-    f.suptitle( 'Layer ' + repr(i_layer) + ':  ' + layer_names[i_layer] + '   Feature ' + repr(i_feature) + '   Selected samples', fontsize=24 )
+    f.suptitle( 'Layer ' + repr(i_layer) + ':  ' + layer_names[i_layer] + '   Feature ' + repr(i_feature) + '   All samples', fontsize=24 )
 
     my_plot_filename = input_patches_file_start + '_layer_' + repr(i_layer) + '_feature_' + repr(i_feature) + '.png'
 
@@ -549,7 +384,7 @@ def calc_and_plot_MAX_INPUT_PATCHES_one_layer_one_sample_all_features( i_layer, 
         calc_and_plot_one_row_MAX_INPUT_PATCHES_one_layer_one_feature_one_sample( axes, i_row, i_layer, i_feature, i_sample, my_layer_activation, this_ERF, Xdata_for_input_patches, ny, nx, nchans,  n_activation_map_boundary_pixels_to_ignore  )
     
     # Add label for each row
-    rows = ['F{}  '.format(row) for row in range(n_feature_maps)]
+    rows = ['Feature {}  '.format(row) for row in range(n_feature_maps)]
     for ax, row in zip(axes[:,0], rows):
         ax.set_ylabel(row, rotation=0, size='large')
     #f.tight_layout()
@@ -569,10 +404,14 @@ def calc_and_plot_MAX_INPUT_PATCHES_one_layer_one_sample_all_features( i_layer, 
 
 def calc_and_plot_one_row_MAX_INPUT_PATCHES_one_layer_one_feature_one_sample( axes, i_row, i_layer, i_feature, i_sample, my_layer_activation, this_ERF, Xdata_for_input_patches, ny, nx, nchans,  n_activation_map_boundary_pixels_to_ignore  ):
 
+    print('**KH** my_layer_activation shape=',my_layer_activation.shape)
     image_width = my_layer_activation[0,:,:,0].shape[1]  # assuming a square image
+    print('**KH** image_width=',image_width)
 
     # Retrieve actiation map and reshape to 2D image
     my_matrix = my_layer_activation[0, :, :, i_feature].reshape(image_width, image_width)
+    print('**KH** ny,nx=',ny,nx)
+    print('**KH** my_matrix shape=',my_matrix.shape)
 
     # Cut out smaller area - to deal with artifacts at boundary
     if ( image_width > 2 * n_activation_map_boundary_pixels_to_ignore ):   # check whether there is space to cut
@@ -621,6 +460,7 @@ def calc_and_plot_one_row_MAX_INPUT_PATCHES_one_layer_one_feature_one_sample( ax
     ### Now add the feature map
     i_col = 0
     my_image = my_matrix  # feature activation map
+    print('**KH** my_image shape = ',my_image.shape)
     z_abs_max, z_min, z_max, non_zero_values_exist = find_symmetric_range_for_colormap( my_image, epsilon_for_activation )
     #z_abs_max = max( 0.5, z_abs_max )  # Use [-1,1] as range, unless z_abs_max > 1.
     

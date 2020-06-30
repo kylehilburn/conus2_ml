@@ -58,6 +58,9 @@ except IndexError:
 print('my_file_prefix =',my_file_prefix)
 
 config = read_configuration()
+print()
+print(config)  #because it is so easy to screw-up the config file
+print()
 
 ################################################################
 
@@ -102,8 +105,20 @@ print('data_suffix =',data_suffix)
 data_file = data_file_name( spath, suffix=data_suffix ) # load file name from file
 print('loading data from file =',data_file)
 Xdata_train, Ydata_train, Xdata_test, Ydata_test, \
-    Lat_train, Lon_train, Lat_test, Lon_test = load_data( data_file )
+    Lat_train, Lon_train, Lat_test, Lon_test, \
+    Xdata_scalar_train, Xdata_scalar_test = load_data( data_file )
 nbatches_train,ny,nx,nchans = Xdata_train.shape
+nbatches_test,ny,nx,nchans = Xdata_test.shape
+print('ny,nx=',ny,nx)
+print('nchans=',nchans)
+print('nbatches train,test=',nbatches_train,nbatches_test)
+
+if Xdata_scalar_train is None:
+    nscalars = 0
+    print('no scalars')
+else:
+    nb_train,ny,ny,nscalars = Xdata_scalar_train.shape
+    print('nscalars=',nscalars)
 
 ################################################################
 
@@ -143,6 +158,15 @@ except KeyError:
 print('activ_last =',activ_last)
 
 try:
+    activ_scalar = config['activ_scalar']
+except KeyError:
+    try:
+        activ_scalar = config[my_file_prefix]['activ_scalar']
+    except KeyError:
+        activ_scalar = defcon['activ_scalar']
+print('activ_scalar =',activ_scalar)
+
+try:
     batch_size = config['batch_size']
 except KeyError:
     try:
@@ -177,6 +201,15 @@ except KeyError:
     except KeyError:
         convfilter_last_layer = defcon['convfilter_last_layer']
 print('convfilter_last_layer =',convfilter_last_layer)
+
+try:
+    convfilter_scalar = config['convfilter_scalar']
+except KeyError:
+    try:
+        convfilter_scalar = config[my_file_prefix]['convfilter_scalar']
+    except KeyError:
+        convfilter_scalar = defcon['convfilter_scalar']
+print('convfilter_scalar =',convfilter_scalar)
 
 try:
     double_filters = config['double_filters']
@@ -303,6 +336,24 @@ except KeyError:
 print('n_filters_last_layer =',n_filters_last_layer)
 
 try:
+    n_filters_scalars = config['n_filters_scalars']
+except KeyError:
+    try:
+        n_filters_scalars = config[my_file_prefix]['n_filters_scalars']
+    except KeyError:
+        n_filters_scalars = defcon['n_filters_scalars']
+print('n_filters_scalars =',n_filters_scalars)
+
+try:
+    n_scalar_layers = config['n_scalar_layers']
+except KeyError:
+    try:
+        n_scalar_layers = config[my_file_prefix]['n_scalar_layers']
+    except KeyError:
+        n_scalar_layers = defcon['n_scalar_layers']
+print('n_scalar_layers =',n_scalar_layers)
+
+try:
     nepochs = config['nepochs']
 except KeyError:
     try:
@@ -328,6 +379,8 @@ except KeyError:
     except KeyError:
         upfilter = defcon['upfilter']
 print('upfilter =',upfilter)
+
+#sys.exit('STOP HERE')
 
 ################################################################
 ##### part below does not change
@@ -385,99 +438,82 @@ print('\nstart',stime)
 
 n_filters = n_filters_for_first_layer
 
+input_layer = Input(shape=(ny, nx, nchans))
+x = input_layer
 if IS_UNET:
-    ##### Define Unet
-    input = Input(shape=(ny, nx, nchans))
-    skip = []
-    x = input
+    skip = []  #UNET has skip connections
 
-    for i_encode_decoder_layer in range(n_encoder_decoder_layers):
+### contracting path (encoder layers)
+for i_encode_decoder_layer in range( n_encoder_decoder_layers ):
+    print('Add encoder layer #' + repr(i_encode_decoder_layer) )
+    if IS_UNET:
         skip.append(x)  # push current x on top of stack
-        for i in range(n_conv_layers_per_encoder_layer): #add conv layer
-            x = Conv2D(n_filters,convfilter,activation=activ,\
-                padding=padding,kernel_initializer=kernel_init)(x)
-            if batchnorm:
-                x = BatchNormalization()(x)
-        x = MaxPooling2D(poolfilter, padding=padding)(x)
-        if dropout:
-            x = Dropout(dropout_rate)(x)
-        if double_filters:
-            n_filters = n_filters * 2 # double for NEXT layer
 
-    for i_encode_decoder_layer in range(n_encoder_decoder_layers):
-        # This was moved up to make endcoder and decoder symmetric.
-        if double_filters:
-            n_filters = n_filters // 2 # halve for NEXT layer
-        
-        for i in range(n_conv_layers_per_decoder_layer): #add conv layer
-            # Switched from Conv2DTranspose to Conv2D.  Same functionality, but easier to visualize filters.
-            x = Conv2D(n_filters,convfilter,activation=activ,\
-                padding=padding,kernel_initializer=kernel_init)(x)
-            if batchnorm:
-                x = BatchNormalization()(x)
-        x = UpSampling2D(upfilter)(x)
+    for i in range(n_conv_layers_per_encoder_layer): #add conv layer
+        x = Conv2D(n_filters,convfilter,activation=activ,\
+            padding=padding,kernel_initializer=kernel_init)(x)
+        if batchnorm:
+            x = BatchNormalization()(x)
+    x = MaxPooling2D(poolfilter,padding=padding)(x)
+    if dropout:
+        x = Dropout(dropout_rate)(x)
+    if double_filters:
+        n_filters = n_filters * 2 # double for NEXT layer
+
+### expanding path (decoder layers)
+for i_encode_decoder_layer in range( n_encoder_decoder_layers ):
+    print('Add decoder layer #' + repr(i_encode_decoder_layer) )
+
+    # This was moved up to make endcoder and decoder symmetric.
+    if double_filters:
+        n_filters = n_filters // 2 # halve for NEXT layer
+    
+    for i in range(n_conv_layers_per_decoder_layer): #add conv layer
+        # Switched from Conv2DTranspose to Conv2D.  Same functionality, but easier to visualize filters.
+        x = Conv2D(n_filters,convfilter,activation=activ,\
+            padding=padding,kernel_initializer=kernel_init)(x)
+        if batchnorm:
+            x = BatchNormalization()(x)
+    x = UpSampling2D(upfilter)(x)
+    if IS_UNET:
         x = Concatenate()([x,skip.pop()]) # pop top element
-        if dropout:
-            x = Dropout(dropout_rate)(x)
-
+    if dropout:
+        x = Dropout(dropout_rate)(x)
+    
+if IS_UNET:
     # One additional (3x3) conv layer to properly incorporate newly
     # added channels at previous concatenate step
     x = Conv2D(n_filters,convfilter,activation=activ,\
         padding=padding,kernel_initializer=kernel_init)(x)
 
-    # last layer: 2D convolution with (1x1) just to merge the channels
-    x = Conv2D(n_filters_last_layer,convfilter_last_layer,\
-        activation=activ_last,padding=padding,\
-        kernel_initializer=kernel_init)(x)
-    x = Reshape((ny,nx))(x)
-    model = Model(inputs=input, outputs=x)
-    print('Unet !!!!')
+# Now add the scalars as additional channels - one channel for each scalar:
+if nscalars > 0:
+    input_scalars = Input(shape=(ny,nx,nscalars))
+    x = Concatenate()([x,input_scalars])
 
+    # scalar layers to incorporate scalar information
+    for i in range(n_scalar_layers):
+        x = Conv2D(n_filters_scalars,convfilter_scalar,activation=activ_scalar,\
+            padding=padding,kernel_initializer=kernel_init)(x)
+        if batchnorm:
+            x = BatchNormalization()(x)
+        if dropout:
+            x = Dropout(dropout_rate)(x)
+
+# last layer: 2D convolution with (1x1) just to merge the channels
+x = Conv2D(n_filters_last_layer,convfilter_last_layer,\
+    activation=activ_last,padding=padding,\
+    kernel_initializer=kernel_init)(x)
+x = Reshape((ny,nx))(x)
+if nscalars == 0:
+    model = Model(inputs=input_layer, outputs=x)
 else:
-    ##### Define standard encoder-decoder network (no skip connections)
-    model = Sequential()
+    model = Model(inputs=[input_layer,input_scalars], outputs=x)
 
-    ### contracting path (encoder layers)
-    for i_encode_decoder_layer in range( n_encoder_decoder_layers ):
-        print('Add encoder layer #' + repr(i_encode_decoder_layer) )
-
-        for i in range(n_conv_layers_per_encoder_layer): #add conv layer
-            model.add(Conv2D(n_filters,convfilter,activation=activ,\
-                padding=padding,input_shape=(ny,nx,nchans), \
-                kernel_initializer=kernel_init))
-            if batchnorm:
-                model.add(BatchNormalization())
-        model.add(MaxPooling2D(poolfilter,padding=padding))
-        if dropout:
-            model.add(Dropout(dropout_rate))
-        if double_filters:
-            n_filters = n_filters * 2 # double for NEXT layer
-
-    ### expanding path (decoder layers)
-    for i_encode_decoder_layer in range( n_encoder_decoder_layers ):
-        print('Add decoder layer #' + repr(i_encode_decoder_layer) )
-
-        # This was moved up to make endcoder and decoder symmetric.
-        if double_filters:
-            n_filters = n_filters // 2 # halve for NEXT layer
-        
-        for i in range(n_conv_layers_per_decoder_layer): #add conv layer
-            # Switched from Conv2DTranspose to Conv2D.  Same functionality, but easier to visualize filters.
-            model.add(Conv2D(n_filters,convfilter,\
-                activation=activ,padding=padding,\
-                kernel_initializer=kernel_init))
-            if batchnorm:
-                model.add(BatchNormalization())
-        model.add(UpSampling2D(upfilter))
-        if dropout:
-            model.add(Dropout(dropout_rate))
-        
-
-    # last layer: 2D convolution with (1x1) just to merge the channels
-    model.add(Conv2D(n_filters_last_layer,convfilter_last_layer,\
-        activation=activ_last,padding=padding,\
-        kernel_initializer=kernel_init))
-    model.add(Reshape((ny,nx)))
+if IS_UNET:
+    print('Unet !!!!')
+else:
+    print('SEQ !!!!')
 
 # Architecture definition complete
 
@@ -491,10 +527,16 @@ print(model.summary())  # print model architecture
 ########### TRAIN MODEL ###########
 model.compile(optimizer=optimizer, loss=loss, metrics=metrics)
 
-history = model.fit(Xdata_train,Ydata_train,epochs=nepochs,\
-    batch_size=batch_size,shuffle=True,\
-    validation_data=(Xdata_test,Ydata_test), \
-    verbose=verbose_fit)
+if nscalars == 0:
+    history = model.fit(Xdata_train,Ydata_train,epochs=nepochs,\
+        batch_size=batch_size,shuffle=True,\
+        validation_data=(Xdata_test,Ydata_test), \
+        verbose=verbose_fit)
+else:
+    history = model.fit([Xdata_train,Xdata_scalar_train],Ydata_train,epochs=nepochs,\
+        batch_size=batch_size,shuffle=True,\
+        validation_data=([Xdata_test,Xdata_scalar_test],Ydata_test), \
+        verbose=verbose_fit)
 
 # Time statistics
 etime = datetime.now()

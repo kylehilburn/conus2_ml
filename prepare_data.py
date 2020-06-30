@@ -3,6 +3,7 @@ import numpy as np
 import sys
 #from read_mrms_coverage_mask import read_mask
 from copy import deepcopy
+import re
 
 tmatch_sec_default = 5.*60.
 
@@ -23,6 +24,8 @@ stds_default = {'y':1., 2:0.01, 6:0.01, 7:1., 9:1., 13:1., 'GROUP':0.1}
 
 solar_channels = [1,2,3,4,5,6]
 
+sza_threshold_default = 88.
+
 def prepare_data(filename_format, caselist, channels, qctimes, \
     augfac = 0, \
     verbose = False, \
@@ -30,6 +33,7 @@ def prepare_data(filename_format, caselist, channels, qctimes, \
     nx = nx_default, \
     ny = ny_default, \
     szanorm = False, \
+    sza_threshold = sza_threshold_default,\
     covthrpct = covthrpct_default, \
     yvar = yvar_default, \
     ymin = ymin_default, \
@@ -54,7 +58,7 @@ def prepare_data(filename_format, caselist, channels, qctimes, \
 #     nx = x-dimension value (integer)
 #     ny = y-dimension value (integer)
 #     szanorm = default=False, if true then normalize C01-C06 by 
-#               solar zenith angle
+#               solar zenith angle when SZA < sza_threshold
 #
 #   "expert" optional arguments (should not have to change):
 #     covthrpct = minimum radar coverage, percent (float)
@@ -62,7 +66,9 @@ def prepare_data(filename_format, caselist, channels, qctimes, \
 #     ymin = Ydata normalization minimum (float)
 #     ymax = Ydata normalization maximum (float)
 #     xmin = Xdata normalization minimum (dictionary)
+#            note that SZA normalization parameters are fixed
 #     xmax = Xdata normalization maximum (dictionary)
+#            note that SZA normalization parameters are fixed
 #     stds = augmentation standard deviations for x and y variables
 #            (dictionary)
 #     tmatch_sec = time radius for qctimes in seconds (float)
@@ -107,16 +113,41 @@ def prepare_data(filename_format, caselist, channels, qctimes, \
     cvalues = []  #channel number (C07=7) or name (GLM_GROUPS)
     ctypes = []
     for achan in channels:
-        if achan.startswith('C'):
+        amatch = re.search('C[0-9]{2}',achan)
+        #if achan.startswith('C'):
+        if amatch:
             ihit = np.argmin(np.abs((ds.variables['channels'][:]-\
                 int(achan.replace('C','')))))
             cindices.append(ihit)
             cvalues.append(ds.variables['channels'][:][ihit])
             ctypes.append('ABI')
-        else:
+        elif 'HRRR' in achan:
+            cindices.append(None)
+            cvalues.append(achan)
+            ctypes.append('HRRR')
+        elif 'CTC' in achan:
+            cindices.append(None)
+            cvalues.append(achan)
+            ctypes.append('CTC')
+        elif 'SZA' in achan:
+            cindices.append(None)
+            cvalues.append(achan)
+            ctypes.append('SZA')
+        elif 'SGA' in achan:
+            cindices.append(None)
+            cvalues.append(achan)
+            ctypes.append('SGA')
+#        else:
+        elif (('GROUP' in achan) or ('FLASH' in achan)):
             cindices.append(None)
             cvalues.append(achan)
             ctypes.append('GLM')
+        elif achan in ['U','V']:
+            cindices.append(None)
+            cvalues.append(achan)
+            ctypes.append('UV')
+        else:
+            sys.exit('error: unrecognized channel')
     if verbose:
         print('cindices=',cindices)
         print('cvalues=',cvalues)
@@ -153,8 +184,20 @@ def prepare_data(filename_format, caselist, channels, qctimes, \
                 zip(cindices,cvalues,ctypes,range(nchans)):
                 if chant == 'ABI':
                     xflag = ds.variables['GOES_ABI_FLAG'][idate,ichan]
-                else:
+                elif chant == 'HRRR':
+                    xflag = ds.variables['HRRR_FLAG'][idate]
+                elif chant == 'GLM':
                     xflag = ds.variables['GOES_GLM_'+achan+'_FLAG'][idate]
+                elif chant == 'CTC':
+                    xflag = ds.variables['GOES_CTC_FLAG'][idate]
+                elif chant == 'UV':
+                    xflag = ds.variables['GOES_UV_FLAG'][idate]
+                elif chant == 'SZA':
+                    xflag = 0  #always good
+                elif chant == 'SGA':
+                    xflag = 0  #always good
+                else:
+                    sys.exit('error: unrecognized channel type in prepare_data')
                 if xflag != 0:
                     if verbose:
                         print('missing goes for '+str(achan)+' at '+\
@@ -163,6 +206,8 @@ def prepare_data(filename_format, caselist, channels, qctimes, \
 
             for aqctime in qctimes:
                 if np.abs((adate-aqctime).total_seconds()) < tmatch_sec:
+                    if verbose:
+                        print('skipping qctime=',aqctime)
                     isbad = True
 
             if not isbad:
@@ -184,6 +229,7 @@ def prepare_data(filename_format, caselist, channels, qctimes, \
     lat = np.zeros((nsamples,ny,nx))
     lon = np.zeros((nsamples,ny,nx))
     badmask = np.zeros((nsamples,ny,nx),dtype=np.int32)  #0=good, 1=bad
+    SZA = np.zeros((nsamples,ny,nx))
 
 # step 3: fill arrays with real samples
 
@@ -213,8 +259,20 @@ def prepare_data(filename_format, caselist, channels, qctimes, \
                 zip(cindices,cvalues,ctypes,range(nchans)):
                 if chant == 'ABI':
                     xflag = ds.variables['GOES_ABI_FLAG'][idate,ichan]
-                else:
+                elif chant == 'HRRR':
+                    xflag = ds.variables['HRRR_FLAG'][idate]
+                elif chant == 'GLM':
                     xflag = ds.variables['GOES_GLM_'+achan+'_FLAG'][idate]
+                elif chant == 'CTC':
+                    xflag = ds.variables['GOES_CTC_FLAG'][idate]
+                elif chant == 'UV':
+                    xflag = ds.variables['GOES_UV_FLAG'][idate]
+                elif chant == 'SZA':
+                    xflag = 0  #always good
+                elif chant == 'SGA':
+                    xflag = 0  #always good
+                else:
+                    sys.exit('error: unrecognized channel type in prepare_data')
                 if xflag != 0:
                     if verbose:
                         print('missing goes for '+str(achan)+' at '+\
@@ -223,6 +281,8 @@ def prepare_data(filename_format, caselist, channels, qctimes, \
 
             for aqctime in qctimes:
                 if np.abs((adate-aqctime).total_seconds()) < tmatch_sec:
+                    if verbose:
+                        print('skipping qctime=',aqctime)
                     isbad = True
 
             if isbad: continue
@@ -236,6 +296,8 @@ def prepare_data(filename_format, caselist, channels, qctimes, \
 
             Ydata[ibatch,:,:] = ds.variables[yvar][idate,:,:]
 
+            SZA[ibatch,:,:] = ds.variables['Solar_Zenith'][idate,:,:]
+
             datelist.append(adate)
 
             for ichan,achan,chant,kchan in \
@@ -243,9 +305,26 @@ def prepare_data(filename_format, caselist, channels, qctimes, \
                 if chant == 'ABI':
                     Xdata[ibatch,:,:,kchan] = \
                         ds.variables['GOES_ABI'][idate,ichan,:,:]
-                else:
+                elif chant == 'HRRR':
+                    Xdata[ibatch,:,:,kchan] = \
+                        ds.variables[achan][idate,:,:]
+                elif chant == 'CTC':
+                    Xdata[ibatch,:,:,kchan] = \
+                        ds.variables['GOES_'+achan][idate,:,:]
+                elif chant == 'UV':
+                    Xdata[ibatch,:,:,kchan] = \
+                        ds.variables['GOES_'+achan][idate,:,:]
+                elif chant == 'SZA':
+                    Xdata[ibatch,:,:,kchan] = \
+                    (1.0+np.cos(np.radians( ds.variables['Solar_Zenith'][idate,:,:] )))/2.0
+                elif chant == 'SGA':
+                    Xdata[ibatch,:,:,kchan] = \
+                    (1.0+np.cos(np.radians( ds.variables['Sun_Glint'][idate,:,:] )))/2.0
+                elif chant == 'GLM':
                     Xdata[ibatch,:,:,kchan] = \
                         ds.variables['GOES_GLM_'+achan][idate,:,:]
+                else:
+                    sys.exit('error: unrecognized channel type in prepare_data')
 
 # I forgot to include these variables in latest run,
 # dimension of which will also depend on moving or stationary box
@@ -273,15 +352,14 @@ def prepare_data(filename_format, caselist, channels, qctimes, \
                     np.sum(badmask[ibatch,:,:]==0))
 
             if szanorm:
-                sys.exit('STOP: not implemented - '\
-                    'need to have sza threshold (e.g., bad when > 88 deg)'\
-                    ' and update badmask')
-#            for ichan,achan,chant,kchan in \
-#                zip(cindices,cvalues,ctypes,range(nchans)):
-#                if chant == 'ABI':
-#                    if szanorm and (achan in solar_channels):
-#                        sza = ds.variables['Solar_Zenith'][idate,:,:]
-#                        Xdata[ibatch,:,:,kchan] /= np.cos(np.radians(sza))
+                for ichan,achan,chant,kchan in \
+                    zip(cindices,cvalues,ctypes,range(nchans)):
+                    if chant == 'ABI':
+                        if achan in solar_channels:
+                            sza = ds.variables['Solar_Zenith'][idate,:,:]
+                            good = sza <= sza_threshold
+                            Xdata[ibatch,:,:,kchan][good] /= np.cos(np.radians(sza[good]))
+                            Xdata[ibatch,:,:,kchan][~good] = 0.
 
             ibatch += 1
 
@@ -319,7 +397,41 @@ def prepare_data(filename_format, caselist, channels, qctimes, \
                         Xdata[ibatch,:,:,ichan]>1] = 1.
                     Xdata[ibatch,:,:,ichan][\
                         badmask[isam,:,:]==1] = fillvalue
-                else:
+                elif chant == 'CTC':
+                    Xdata[ibatch,:,:,ichan] = \
+                        (Xdata[ibatch,:,:,ichan]-xmin[achan])/\
+                        (xmax[achan]-xmin[achan])
+                    Xdata[ibatch,:,:,ichan][\
+                        Xdata[ibatch,:,:,ichan]<0] = 0.
+                    Xdata[ibatch,:,:,ichan][\
+                        Xdata[ibatch,:,:,ichan]>1] = 1.
+                    Xdata[ibatch,:,:,ichan][\
+                        badmask[isam,:,:]==1] = fillvalue
+                elif chant == 'UV':
+                    Xdata[ibatch,:,:,ichan] = \
+                        (Xdata[ibatch,:,:,ichan]-xmin[achan])/\
+                        (xmax[achan]-xmin[achan])
+                    Xdata[ibatch,:,:,ichan][\
+                        Xdata[ibatch,:,:,ichan]<0] = 0.
+                    Xdata[ibatch,:,:,ichan][\
+                        Xdata[ibatch,:,:,ichan]>1] = 1.
+                    Xdata[ibatch,:,:,ichan][\
+                        badmask[isam,:,:]==1] = fillvalue
+                elif chant == 'SZA':
+                    Xdata[ibatch,:,:,ichan][\
+                        Xdata[ibatch,:,:,ichan]<0] = 0.
+                    Xdata[ibatch,:,:,ichan][\
+                        Xdata[ibatch,:,:,ichan]>1] = 1.
+                    Xdata[ibatch,:,:,ichan][\
+                        badmask[isam,:,:]==1] = fillvalue
+                elif chant == 'SGA':
+                    Xdata[ibatch,:,:,ichan][\
+                        Xdata[ibatch,:,:,ichan]<0] = 0.
+                    Xdata[ibatch,:,:,ichan][\
+                        Xdata[ibatch,:,:,ichan]>1] = 1.
+                    Xdata[ibatch,:,:,ichan][\
+                        badmask[isam,:,:]==1] = fillvalue
+                elif chant == 'ABI':
                     if achan < 7:
                         Xdata[ibatch,:,:,ichan] = \
                             (Xdata[ibatch,:,:,ichan]-xmin[achan])/\
@@ -340,6 +452,30 @@ def prepare_data(filename_format, caselist, channels, qctimes, \
                             Xdata[ibatch,:,:,ichan]>1] = 1.
                         Xdata[ibatch,:,:,ichan][\
                             badmask[isam,:,:]==1] = fillvalue
+                elif chant == 'HRRR':
+                    if achan in ['HRRR_H500','HRRR_THICK']:
+                        Xdata[ibatch,:,:,ichan] = \
+                            (xmax[achan]-Xdata[ibatch,:,:,ichan])/\
+                            (xmax[achan]-xmin[achan])
+                        Xdata[ibatch,:,:,ichan][\
+                            Xdata[ibatch,:,:,ichan]<0] = 0.
+                        Xdata[ibatch,:,:,ichan][\
+                            Xdata[ibatch,:,:,ichan]>1] = 1.
+                        Xdata[ibatch,:,:,ichan][\
+                            badmask[isam,:,:]==1] = fillvalue
+                    else:
+                        Xdata[ibatch,:,:,ichan] = \
+                            (Xdata[ibatch,:,:,ichan]-xmin[achan])/\
+                            (xmax[achan]-xmin[achan])
+                        Xdata[ibatch,:,:,ichan][\
+                            Xdata[ibatch,:,:,ichan]<0] = 0.
+                        Xdata[ibatch,:,:,ichan][\
+                            Xdata[ibatch,:,:,ichan]>1] = 1.
+                        Xdata[ibatch,:,:,ichan][\
+                            badmask[isam,:,:]==1] = fillvalue
+                else:
+                    sys.exit('error: unrecognized channel type in prepare_data')
+
 
     ds.close()
 
@@ -352,5 +488,6 @@ def prepare_data(filename_format, caselist, channels, qctimes, \
     outdict['Lon'] = lon
     outdict['Shape'] = shape
     outdict['Dates'] = datelist
+    outdict['SZA'] = SZA
 
     return outdict
